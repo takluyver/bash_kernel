@@ -3,11 +3,13 @@ from pexpect import replwrap
 from subprocess import check_output
 import re
 
+__version__ = '0.1'
+
 version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
 class BashKernel(Kernel):
     implementation = 'bash_kernel'
-    implementation_version = '1.0'
+    implementation_version = __version__
     language = 'bash'
     @property
     def language_version(self):
