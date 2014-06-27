@@ -13,5 +13,6 @@ setup(name='bash_kernel',
       author='Thomas Kluyver',
       author_email='thomas@kluyver.me.uk',
       py_modules=['bash_kernel'],
-      cmdclass={'install': install_with_kernelspec}
+      cmdclass={'install': install_with_kernelspec},
+      install_requires=['ipython>=3.0', 'pexpect>=3.3'],
       )
