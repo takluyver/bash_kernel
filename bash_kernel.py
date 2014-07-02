@@ -1,5 +1,7 @@
 from IPython.kernel.zmq.kernelbase import Kernel
 from pexpect import replwrap
+
+import signal
 from subprocess import check_output
 import re
 
@@ -25,14 +27,22 @@ class BashKernel(Kernel):
     
     def __init__(self, **kwargs):
         Kernel.__init__(self, **kwargs)
-        self.bashwrapper = replwrap.bash()
+        # Signal handlers are inherited by forked processes, and we can't easily
+        # reset it from the subprocess. Since kernelapp ignores SIGINT except in
+        # message handlers, we need to temporarily reset the SIGINT handler here
+        # so that bash and its children are interruptible.
+        sig = signal.signal(signal.SIGINT, signal.SIG_DFL)
+        try:
+            self.bashwrapper = replwrap.bash()
+        finally:
+            signal.signal(signal.SIGINT, sig)
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
                    allow_stdin=False):
         if not code.strip():
             return {'status': 'ok', 'execution_count': self.execution_count,
                     'payloads': [], 'user_expressions': {}}
-        
+
         interrupted = False
         try:
             output = self.bashwrapper.run_command(code.rstrip(), timeout=None)
