@@ -1,4 +1,5 @@
 {"argv":["python3","-m","bash_kernel", "-f", "{connection_file}"],
  "display_name":"Bash",
- "language":"bash"
+ "language":"bash",
+ "codemirror_mode":"shell"
 }
