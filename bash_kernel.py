@@ -1,5 +1,6 @@
 from IPython.kernel.zmq.kernelbase import Kernel
 from pexpect import replwrap
+import pexpect
 
 import signal
 from subprocess import check_output
@@ -41,7 +42,7 @@ class BashKernel(Kernel):
                    allow_stdin=False):
         if not code.strip():
             return {'status': 'ok', 'execution_count': self.execution_count,
-                    'payloads': [], 'user_expressions': {}}
+                    'payload': [], 'user_expressions': {}}
 
         interrupted = False
         try:
@@ -51,16 +52,19 @@ class BashKernel(Kernel):
             interrupted = True
             self.bashwrapper._expect_prompt()
             output = self.bashwrapper.child.before
+        except pexpect.EOF:
+            # TODO: how do we shut down gracefully here?
+            output = ''
 
         if not silent:
-            stream_content = {'name': 'stdout', 'data':output}
+            stream_content = {'name': 'stdout', 'data': output}
             self.send_response(self.iopub_socket, 'stream', stream_content)
         
         if interrupted:
             return {'status': 'abort', 'execution_count': self.execution_count}
         
         try:
-            exitcode = int(self.run_command('echo $?').rstrip())
+            exitcode = int(self.bashwrapper.run_command('echo $?').rstrip())
         except Exception:
             exitcode = 1
 
@@ -69,7 +73,7 @@ class BashKernel(Kernel):
                     'ename': '', 'evalue': str(exitcode), 'traceback': []}
         else:
             return {'status': 'ok', 'execution_count': self.execution_count,
-                    'payloads': [], 'user_expressions': {}}
+                    'payload': [], 'user_expressions': {}}
 
 if __name__ == '__main__':
     from IPython.kernel.zmq.kernelapp import IPKernelApp
