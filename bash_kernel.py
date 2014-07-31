@@ -86,7 +86,7 @@ class BashKernel(Kernel):
         # check for valid function name
         if not re.match('\A[a-zA-Z_]', token):
             return
-        start = cursor_pos - len(code)
+        start = cursor_pos - len(token)
         cmd = 'compgen -c %s' % token
         output = self.bashwrapper.run_command(cmd).rstrip()
         return {'matches': output.split(), 'cursor_start': start,
