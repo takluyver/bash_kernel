@@ -75,6 +75,24 @@ class BashKernel(Kernel):
             return {'status': 'ok', 'execution_count': self.execution_count,
                     'payload': [], 'user_expressions': {}}
 
+    def do_complete(self, code, cursor_pos):
+        code = code[:cursor_pos]
+        if code[-1] == ' ':
+            return
+        tokens = code.replace(';', ' ').split()
+        if not tokens:
+            return
+        token = tokens[-1]
+        # check for valid function name
+        if not re.match('\A[a-zA-Z_]', token):
+            return
+        start = cursor_pos - len(code)
+        cmd = 'compgen -c %s' % token
+        output = self.bashwrapper.run_command(cmd).rstrip()
+        return {'matches': output.split(), 'cursor_start': start,
+                'cursor_end': cursor_pos, 'metadata': dict(),
+                'status': 'ok'}
+
 if __name__ == '__main__':
     from IPython.kernel.zmq.kernelapp import IPKernelApp
     IPKernelApp.launch_instance(kernel_class=BashKernel)
