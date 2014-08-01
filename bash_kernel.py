@@ -80,19 +80,24 @@ class BashKernel(Kernel):
         default = {'matches': [], 'cursor_start': 0,
                    'cursor_end': cursor_pos, 'metadata': dict(),
                    'status': 'ok'}
-        if code[-1] == ' ':
+
+        if not code or code[-1] == ' ':
             return default
+
         tokens = code.replace(';', ' ').split()
         if not tokens:
             return default
+
         token = tokens[-1]
         start = cursor_pos - len(token)
         cmd = 'compgen -cdfa %s' % token
         output = self.bashwrapper.run_command(cmd).rstrip()
+
         matches = output.split()
         if not matches:
             return default
         matches = [m for m in matches if m.startswith(token)]
+
         return {'matches': matches, 'cursor_start': start,
                 'cursor_end': cursor_pos, 'metadata': dict(),
                 'status': 'ok'}
