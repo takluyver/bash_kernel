@@ -104,6 +104,20 @@ class BashKernel(Kernel):
                 'cursor_end': cursor_pos, 'metadata': dict(),
                 'status': 'ok'}
 
+    def do_shutdown(self, restart):
+        if restart:
+            self._start_bash()
+        return {'status': 'ok', 'restart': restart}
+
+    def do_history(self, hist_access_type, output, raw, session=None,
+                   start=None, stop=None, n=None, pattern=None, unique=False):
+        """Access bash history file.
+        """
+        history = self.bashwrapper.run_command('history')
+        history = history.splitlines()
+        history = [(None, None, h) for h in history]
+        return {'history': history}
+
 if __name__ == '__main__':
     from IPython.kernel.zmq.kernelapp import IPKernelApp
     IPKernelApp.launch_instance(kernel_class=BashKernel)
