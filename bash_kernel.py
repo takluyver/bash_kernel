@@ -1,6 +1,5 @@
 from IPython.kernel.zmq.kernelbase import Kernel
-from pexpect import replwrap
-import pexpect
+from pexpect import replwrap, EOF
 
 import signal
 from subprocess import check_output
@@ -28,6 +27,9 @@ class BashKernel(Kernel):
     
     def __init__(self, **kwargs):
         Kernel.__init__(self, **kwargs)
+        self._start_bash()
+
+    def _start_bash(self):
         # Signal handlers are inherited by forked processes, and we can't easily
         # reset it from the subprocess. Since kernelapp ignores SIGINT except in
         # message handlers, we need to temporarily reset the SIGINT handler here
@@ -52,9 +54,9 @@ class BashKernel(Kernel):
             interrupted = True
             self.bashwrapper._expect_prompt()
             output = self.bashwrapper.child.before
-        except pexpect.EOF:
-            # TODO: how do we shut down gracefully here?
-            output = ''
+        except EOF:
+            output = self.bashwrapper.child.before + 'Restarting Bash'
+            self._start_bash()
 
         if not silent:
             stream_content = {'name': 'stdout', 'data': output}
