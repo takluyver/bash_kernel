@@ -1,12 +1,29 @@
 from distutils.core import setup
 from distutils.command.install import install
+import json
+import os.path
 import sys
+
+kernel_json = {"argv":[sys.executable,"-m","bash_kernel", "-f", "{connection_file}"],
+ "display_name":"Bash",
+ "language":"bash",
+ "codemirror_mode":"shell"
+}
 
 class install_with_kernelspec(install):
     def run(self):
+        # Regular installation
         install.run(self)
-        from IPython.kernel.kernelspec import install_kernel_spec
-        install_kernel_spec('kernelspec', 'bash', replace=True)
+
+        # Now write the kernelspec
+        from IPython.kernel.kernelspec import KernelSpecManager
+        from IPython.utils.path import ensure_dir_exists
+        destdir = os.path.join(KernelSpecManager().user_kernel_dir, 'bash')
+        ensure_dir_exists(destdir)
+        with open(os.path.join(destdir, 'kernel.json'), 'w') as f:
+            json.dump(kernel_json, f, sort_keys=True)
+        
+        # TODO: Copy resources once they're specified
 
 with open('README.rst') as f:
     readme = f.read()
