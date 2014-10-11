@@ -59,7 +59,7 @@ class BashKernel(Kernel):
             self._start_bash()
 
         if not silent:
-            stream_content = {'name': 'stdout', 'data': output}
+            stream_content = {'name': 'stdout', 'text': output}
             self.send_response(self.iopub_socket, 'stream', stream_content)
         
         if interrupted:
