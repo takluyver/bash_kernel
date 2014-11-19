@@ -24,6 +24,11 @@ class BashKernel(Kernel):
         if self._banner is None:
             self._banner = check_output(['bash', '--version']).decode('utf-8')
         return self._banner
+
+    language_info = {'codemirror_mode': 'shell',
+                     'mimetype': 'text/x-sh',
+                     'file_extension': 'sh'
+                    }
     
     def __init__(self, **kwargs):
         Kernel.__init__(self, **kwargs)
