@@ -1,7 +1,8 @@
 from distutils.core import setup
 from distutils.command.install import install
+from distutils import log
 import json
-import os.path
+import os
 import sys
 
 kernel_json = {"argv":[sys.executable,"-m","bash_kernel", "-f", "{connection_file}"],
@@ -16,14 +17,16 @@ class install_with_kernelspec(install):
         install.run(self)
 
         # Now write the kernelspec
-        from IPython.kernel.kernelspec import KernelSpecManager
-        from IPython.utils.path import ensure_dir_exists
-        destdir = os.path.join(KernelSpecManager().user_kernel_dir, 'bash')
-        ensure_dir_exists(destdir)
-        with open(os.path.join(destdir, 'kernel.json'), 'w') as f:
-            json.dump(kernel_json, f, sort_keys=True)
-        
-        # TODO: Copy resources once they're specified
+        from IPython.kernel.kernelspec import install_kernel_spec
+        from IPython.utils.tempdir import TemporaryDirectory
+        with TemporaryDirectory() as td:
+            os.chmod(td, 0o755) # Starts off as 700, not user readable
+            with open(os.path.join(td, 'kernel.json'), 'w') as f:
+                json.dump(kernel_json, f, sort_keys=True)
+            # TODO: Copy resources once they're specified
+
+            log.info('Installing IPython kernel spec')
+            install_kernel_spec(td, 'bash', system=not self.user, replace=True)
 
 with open('README.rst') as f:
     readme = f.read()
