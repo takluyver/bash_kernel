@@ -9,16 +9,19 @@ __version__ = '0.2'
 
 version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
+
 class BashKernel(Kernel):
     implementation = 'bash_kernel'
     implementation_version = __version__
     language = 'bash'
+
     @property
     def language_version(self):
         m = version_pat.search(self.banner)
         return m.group(1)
 
     _banner = None
+
     @property
     def banner(self):
         if self._banner is None:
@@ -27,9 +30,8 @@ class BashKernel(Kernel):
 
     language_info = {'codemirror_mode': 'shell',
                      'mimetype': 'text/x-sh',
-                     'file_extension': 'sh'
-                    }
-    
+                     'file_extension': 'sh'}
+
     def __init__(self, **kwargs):
         Kernel.__init__(self, **kwargs)
         self._start_bash()
@@ -45,8 +47,8 @@ class BashKernel(Kernel):
         finally:
             signal.signal(signal.SIGINT, sig)
 
-    def do_execute(self, code, silent, store_history=True, user_expressions=None,
-                   allow_stdin=False):
+    def do_execute(self, code, silent, store_history=True,
+                   user_expressions=None, allow_stdin=False):
         if not code.strip():
             return {'status': 'ok', 'execution_count': self.execution_count,
                     'payload': [], 'user_expressions': {}}
@@ -66,10 +68,10 @@ class BashKernel(Kernel):
         if not silent:
             stream_content = {'name': 'stdout', 'text': output}
             self.send_response(self.iopub_socket, 'stream', stream_content)
-        
+
         if interrupted:
             return {'status': 'abort', 'execution_count': self.execution_count}
-        
+
         try:
             exitcode = int(self.bashwrapper.run_command('echo $?').rstrip())
         except Exception:
