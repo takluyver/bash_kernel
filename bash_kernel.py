@@ -1,14 +1,20 @@
 from IPython.kernel.zmq.kernelbase import Kernel
 from pexpect import replwrap, EOF
 
-import signal
 from subprocess import check_output
+from os import unlink
+
+import base64
+import imghdr
 import re
+import signal
+import urllib
 
 __version__ = '0.2'
 
 version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
+_TEXT_SAVED = "bash_kernel: saved image data to:"
 
 class BashKernel(Kernel):
     implementation = 'bash_kernel'
@@ -47,6 +53,16 @@ class BashKernel(Kernel):
         finally:
             signal.signal(signal.SIGINT, sig)
 
+        # Register Bash function to write image data to temporary file
+        bash_rc = """
+        display () {
+            TMPFILE=$(mktemp ${TMPDIR-/tmp}/bash_kernel.XXXXXXXXXX)
+            cat > $TMPFILE
+            echo "%s $TMPFILE" >&2
+        }
+        """ % _TEXT_SAVED
+        self.bashwrapper.run_command(bash_rc)
+
     def do_execute(self, code, silent, store_history=True,
                    user_expressions=None, allow_stdin=False):
         if not code.strip():
@@ -66,8 +82,16 @@ class BashKernel(Kernel):
             self._start_bash()
 
         if not silent:
+            image_filenames, output = extract_image_filenames(output)
+
+            # Send standard output
             stream_content = {'name': 'stdout', 'text': output}
             self.send_response(self.iopub_socket, 'stream', stream_content)
+
+            # Send images, if any
+            for filename in image_filenames:
+                self.send_response(self.iopub_socket, 'display_data',
+                                   display_data(filename))
 
         if interrupted:
             return {'status': 'abort', 'execution_count': self.execution_count}
@@ -110,6 +134,46 @@ class BashKernel(Kernel):
         return {'matches': matches, 'cursor_start': start,
                 'cursor_end': cursor_pos, 'metadata': dict(),
                 'status': 'ok'}
+
+
+def display_data(filename):
+    with open(filename, 'rb') as f:
+        image = f.read()
+
+    image_type = imghdr.what(None, image)
+    if image_type:
+        image_data = urllib.parse.quote(base64.b64encode(image))
+        content = {
+            'source': 'kernel',
+            'data': {
+                'image/' + image_type: image_data
+            }
+        }
+    else:
+        content = {
+            'source': 'kernel',
+            'data': {
+                'text': "Not a valid image."
+            }
+        }
+
+    unlink(filename)
+    return content
+
+
+def extract_image_filenames(output):
+    output_lines = []
+    image_filenames = []
+
+    for line in output.split("\n"):
+        if line.startswith(_TEXT_SAVED):
+            filename = line.rstrip().split(": ")[-1]
+            image_filenames.append(filename)
+        else:
+            output_lines.append(line)
+
+    output = "\n".join(output_lines)
+    return image_filenames, output
 
 if __name__ == '__main__':
     from IPython.kernel.zmq.kernelapp import IPKernelApp
