@@ -14,13 +14,14 @@ __version__ = '0.2'
 
 version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
-_TEXT_SAVED_IMAGE = "bash_kernel: saved image data to:"
+from .images import (
+    extract_image_filenames, display_data_for_image, image_setup_cmd
+)
 
 
 class BashKernel(Kernel):
     implementation = 'bash_kernel'
     implementation_version = __version__
-    language = 'bash'
 
     @property
     def language_version(self):
@@ -35,9 +36,10 @@ class BashKernel(Kernel):
             self._banner = check_output(['bash', '--version']).decode('utf-8')
         return self._banner
 
-    language_info = {'codemirror_mode': 'shell',
+    language_info = {'name': 'bash',
+                     'codemirror_mode': 'shell',
                      'mimetype': 'text/x-sh',
-                     'file_extension': 'sh'}
+                     'file_extension': '.sh'}
 
     def __init__(self, **kwargs):
         Kernel.__init__(self, **kwargs)
@@ -55,14 +57,7 @@ class BashKernel(Kernel):
             signal.signal(signal.SIGINT, sig)
 
         # Register Bash function to write image data to temporary file
-        bash_rc = """
-        display () {
-            TMPFILE=$(mktemp ${TMPDIR-/tmp}/bash_kernel.XXXXXXXXXX)
-            cat > $TMPFILE
-            echo "%s $TMPFILE" >&2
-        }
-        """ % _TEXT_SAVED_IMAGE
-        self.bashwrapper.run_command(bash_rc)
+        self.bashwrapper.run_command(image_setup_cmd)
 
     def do_execute(self, code, silent, store_history=True,
                    user_expressions=None, allow_stdin=False):
@@ -92,7 +87,7 @@ class BashKernel(Kernel):
             # Send images, if any
             for filename in image_filenames:
                 try:
-                    data = display_data(filename)
+                    data = display_data_for_image(filename)
                 except ValueError as e:
                     message = {'name': 'stdout', 'text': str(e)}
                     self.send_response(self.iopub_socket, 'stream', message)
@@ -142,39 +137,3 @@ class BashKernel(Kernel):
                 'status': 'ok'}
 
 
-def display_data(filename):
-    with open(filename, 'rb') as f:
-        image = f.read()
-    unlink(filename)
-
-    image_type = imghdr.what(None, image)
-    if image_type is None:
-        raise ValueError("Not a valid image: %s" % image)
-
-    image_data = urllib.parse.quote(base64.b64encode(image))
-    content = {
-        'source': 'kernel',
-        'data': {
-            'image/' + image_type: image_data
-        }
-    }
-    return content
-
-
-def extract_image_filenames(output):
-    output_lines = []
-    image_filenames = []
-
-    for line in output.split("\n"):
-        if line.startswith(_TEXT_SAVED_IMAGE):
-            filename = line.rstrip().split(": ")[-1]
-            image_filenames.append(filename)
-        else:
-            output_lines.append(line)
-
-    output = "\n".join(output_lines)
-    return image_filenames, output
-
-if __name__ == '__main__':
-    from IPython.kernel.zmq.kernelapp import IPKernelApp
-    IPKernelApp.launch_instance(kernel_class=BashKernel)

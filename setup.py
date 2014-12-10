@@ -43,7 +43,7 @@ setup(name='bash_kernel',
       author='Thomas Kluyver',
       author_email='thomas@kluyver.me.uk',
       url='https://github.com/takluyver/bash_kernel',
-      py_modules=['bash_kernel'],
+      packages=['bash_kernel'],
       cmdclass={'install': install_with_kernelspec},
       install_requires=['pexpect>=3.3'],
       classifiers = [
