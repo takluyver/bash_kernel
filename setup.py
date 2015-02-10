@@ -26,7 +26,7 @@ class install_with_kernelspec(install):
             # TODO: Copy resources once they're specified
 
             log.info('Installing IPython kernel spec')
-            install_kernel_spec(td, 'bash', system=not self.user, replace=True)
+            install_kernel_spec(td, 'bash', user=self.user, replace=True)
 
 with open('README.rst') as f:
     readme = f.read()
