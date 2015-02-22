@@ -37,7 +37,7 @@ if svem_flag in sys.argv:
     sys.argv.remove(svem_flag)
 
 setup(name='bash_kernel',
-      version='0.2',
+      version='0.3',
       description='A bash kernel for IPython',
       long_description=readme,
       author='Thomas Kluyver',
