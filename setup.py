@@ -8,7 +8,8 @@ import sys
 kernel_json = {"argv":[sys.executable,"-m","bash_kernel", "-f", "{connection_file}"],
  "display_name":"Bash",
  "language":"bash",
- "codemirror_mode":"shell"
+ "codemirror_mode":"shell",
+ "env":{"PS1": "$"}
 }
 
 class install_with_kernelspec(install):
