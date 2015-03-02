@@ -1,6 +1,6 @@
 A simple IPython kernel for bash
 
-This requires IPython 3, which is not yet released.
+This requires IPython 3, which has just been released.
 
 To test it, install with ``setup.py``, then::
 
