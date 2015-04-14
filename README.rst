@@ -2,7 +2,7 @@ A simple IPython kernel for bash
 
 This requires IPython 3.
 
-To use it, install with ``setup.py``, and then run one of:
+To use it, install with ``pip install bash_kernel``, and then run one of:
 
 .. code:: shell
 
