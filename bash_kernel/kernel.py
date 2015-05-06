@@ -122,12 +122,23 @@ class BashKernel(Kernel):
         if not tokens:
             return default
 
+        matches = []
         token = tokens[-1]
         start = cursor_pos - len(token)
-        cmd = 'compgen -cdfa %s' % token
-        output = self.bashwrapper.run_command(cmd).rstrip()
 
-        matches = output.split()
+        if token[0] == '$':
+            # complete variables
+            cmd = 'compgen -A arrayvar -A export -A variable %s' % token[1:] # strip leading $
+            output = self.bashwrapper.run_command(cmd).rstrip()
+            completions = set(output.split())
+            # append matches including leading $
+            matches.extend(['$'+c for c in completions])
+        else:
+            # complete functions and builtins
+            cmd = 'compgen -cdfa %s' % token
+            output = self.bashwrapper.run_command(cmd).rstrip()
+            matches.extend(output.split())
+            
         if not matches:
             return default
         matches = [m for m in matches if m.startswith(token)]
