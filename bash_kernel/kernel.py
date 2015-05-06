@@ -143,7 +143,7 @@ class BashKernel(Kernel):
             return default
         matches = [m for m in matches if m.startswith(token)]
 
-        return {'matches': matches, 'cursor_start': start,
+        return {'matches': sorted(matches), 'cursor_start': start,
                 'cursor_end': cursor_pos, 'metadata': dict(),
                 'status': 'ok'}
 
