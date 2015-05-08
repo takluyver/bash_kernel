@@ -18,6 +18,7 @@ class install_with_kernelspec(install):
         install.run(self)
 
         # Now write the kernelspec
+        user = '--user' in sys.argv
         from IPython.kernel.kernelspec import install_kernel_spec
         from IPython.utils.tempdir import TemporaryDirectory
         with TemporaryDirectory() as td:
@@ -27,7 +28,10 @@ class install_with_kernelspec(install):
             # TODO: Copy resources once they're specified
 
             log.info('Installing IPython kernel spec')
-            install_kernel_spec(td, 'bash', user=self.user, replace=True)
+            try:
+                install_kernel_spec(td, "bash", user=user, replace=True)
+            except:
+                install_kernel_spec(td, "bash", user=not user, replace=True)
 
 with open('README.rst') as f:
     readme = f.read()
