@@ -30,8 +30,9 @@ def _is_root():
     except AttributeError:
         return ctypes.windll.shell32.IsUserAnAdmin() != 0
 
-def main(argv=None):
-    install_my_kernel_spec()
+def main(argv=[]):
+    user = '--user' in argv or not _is_root()
+    install_my_kernel_spec(user=user)
 
 if __name__ == '__main__':
-    main()
+    main(argv=sys.argv)
