@@ -23,12 +23,11 @@ def install_my_kernel_spec(user=True):
         install_kernel_spec(td, 'bash', user=user, replace=True)
 
 def _is_root():
-    """Cross-platform way to check admin rights"""
     import ctypes, os
     try:
         return os.geteuid() == 0
     except AttributeError:
-        return ctypes.windll.shell32.IsUserAnAdmin() != 0
+        return False # assume not an admin on non-Unix platforms
 
 def main(argv=[]):
     user = '--user' in argv or not _is_root()
