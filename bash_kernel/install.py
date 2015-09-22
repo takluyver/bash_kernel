@@ -23,7 +23,24 @@ def install_my_kernel_spec(user=True):
         install_kernel_spec(td, 'bash', user=user, replace=True)
 
 def main(argv=None):
-    install_my_kernel_spec()
+    user = True
+    if len(argv) > 1 and argv[1].find("=") != -1:
+        key,val = argv[1].split('=')
+        if key == "user":
+            if val == "false" or val == "False":
+	        user = False
+        else:
+            raise ValueError(usage())
+                
+    install_my_kernel_spec(user=user)
+
+def usage():
+    usage = """
+    Install bash_kernel as user or system user.
+    python bash_kernel.install user=False will install system wide
+    python bash_kernel.install will install to current user directory
+    """
+    return usage
 
 if __name__ == '__main__':
-    main()
+    main(argv=sys.argv)
