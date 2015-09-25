@@ -23,7 +23,6 @@ def install_my_kernel_spec(user=True):
         install_kernel_spec(td, 'bash', user=user, replace=True)
 
 def _is_root():
-    import os
     try:
         return os.geteuid() == 0
     except AttributeError:
