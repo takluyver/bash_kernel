@@ -22,8 +22,15 @@ def install_my_kernel_spec(user=True):
         print('Installing IPython kernel spec')
         install_kernel_spec(td, 'bash', user=user, replace=True)
 
-def main(argv=None):
-    install_my_kernel_spec()
+def _is_root():
+    try:
+        return os.geteuid() == 0
+    except AttributeError:
+        return False # assume not an admin on non-Unix platforms
+
+def main(argv=[]):
+    user = '--user' in argv or not _is_root()
+    install_my_kernel_spec(user=user)
 
 if __name__ == '__main__':
-    main()
+    main(argv=sys.argv)
