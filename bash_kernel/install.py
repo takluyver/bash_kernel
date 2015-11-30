@@ -2,7 +2,7 @@ import json
 import os
 import sys
 
-from IPython.kernel.kernelspec import install_kernel_spec
+from jupyter_client.kernelspec import install_kernel_spec
 from IPython.utils.tempdir import TemporaryDirectory
 
 kernel_json = {"argv":[sys.executable,"-m","bash_kernel", "-f", "{connection_file}"],
