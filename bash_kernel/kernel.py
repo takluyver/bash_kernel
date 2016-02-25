@@ -103,8 +103,12 @@ class BashKernel(Kernel):
             exitcode = 1
 
         if exitcode:
-            return {'status': 'error', 'execution_count': self.execution_count,
-                    'ename': '', 'evalue': str(exitcode), 'traceback': []}
+            error_content = {'execution_count': self.execution_count,
+                             'ename': '', 'evalue': str(exitcode), 'traceback': []}
+
+            self.send_response(self.iopub_socket, 'error', error_content)
+            error_content['status'] = 'error'
+            return error_content
         else:
             return {'status': 'ok', 'execution_count': self.execution_count,
                     'payload': [], 'user_expressions': {}}
@@ -138,7 +142,7 @@ class BashKernel(Kernel):
             cmd = 'compgen -cdfa %s' % token
             output = self.bashwrapper.run_command(cmd).rstrip()
             matches.extend(output.split())
-            
+
         if not matches:
             return default
         matches = [m for m in matches if m.startswith(token)]
