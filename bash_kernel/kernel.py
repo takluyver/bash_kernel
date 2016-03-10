@@ -1,8 +1,9 @@
 from ipykernel.kernelbase import Kernel
 from pexpect import replwrap, EOF
+import pexpect
 
 from subprocess import check_output
-from os import unlink
+from os import path
 
 import base64
 import imghdr
@@ -18,6 +19,39 @@ from .images import (
     extract_image_filenames, display_data_for_image, image_setup_cmd
 )
 
+# An attempt was made to make this subclass for incremental output
+# work for the latest pexpect (ver 4.1), as well as pexpect version
+# 3.3, which gets installed when using the Anaconda installation
+# method that is recommended on the Jupyter installation page.
+class IREPLWrapper(replwrap.REPLWrapper):
+    def __init__(self, cmd_or_spawn, orig_prompt, prompt_change,
+                 extra_init_cmd=None, bkernel=None):
+        self.bkernel = bkernel
+        replwrap.REPLWrapper.__init__(self, cmd_or_spawn, orig_prompt, prompt_change)
+        # extra_init_cmd can be passed in to REPLWrapper.__init__, however
+        # that parameter is not supported in older versions of pexpect. Therefore
+        # extra_init_cmd is run here:
+        self.run_command(extra_init_cmd)
+
+    def _expect_prompt(self, timeout=-1):
+        if timeout == None or timeout == 1:
+            # "None" means we are executing code from a Jupyter cell.  The "timeout==1" case
+            # is a workaround for a problem in pexpect 3.3 that breaks incremental output.
+            # In either case, do incremental output:
+            while True:
+                pos = self.child.expect_exact([self.prompt, self.continuation_prompt, '\r\n'],
+                                              timeout=None)
+                if pos == 2:
+                    # End of line received, so immediately send output received so far
+                    self.bkernel.process_output(self.child.before + '\n')
+                else:
+                    break
+        else:
+            # Otherwise, use existing non-incremental code
+            pos = replwrap.REPLWrapper._expect_prompt(self, timeout=timeout)
+
+        # Prompt received, so return normally
+        return pos
 
 class BashKernel(Kernel):
     implementation = 'bash_kernel'
@@ -52,32 +86,26 @@ class BashKernel(Kernel):
         # so that bash and its children are interruptible.
         sig = signal.signal(signal.SIGINT, signal.SIG_DFL)
         try:
-            self.bashwrapper = replwrap.bash()
+            # Use IREPLWrapper, a subclass of REPLWrapper that gives
+            # incremental output specifically for bash_kernel.  Note
+            # that an earlier attempt code tried to use pexpect.spawn
+            # here failed because the encoding='utf-8' option was not
+            # supported on an earlier version of pexpect.
+            self.bashwrapper = IREPLWrapper("bash --norc",
+                                            u'\$', u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''",
+                                            extra_init_cmd="export PAGER=cat", bkernel=self)
+            # Execute .bashrc via the bashrc.sh wrapper provided with pexpect.
+            # (source command fails with harmless error if bashrc.sh is not installed)
+            bashrc = path.join(path.dirname(pexpect.__file__), 'bashrc.sh')
+            self.bashwrapper.run_command('source \'%s\'' % bashrc)
         finally:
             signal.signal(signal.SIGINT, sig)
 
         # Register Bash function to write image data to temporary file
         self.bashwrapper.run_command(image_setup_cmd)
 
-    def do_execute(self, code, silent, store_history=True,
-                   user_expressions=None, allow_stdin=False):
-        if not code.strip():
-            return {'status': 'ok', 'execution_count': self.execution_count,
-                    'payload': [], 'user_expressions': {}}
-
-        interrupted = False
-        try:
-            output = self.bashwrapper.run_command(code.rstrip(), timeout=None)
-        except KeyboardInterrupt:
-            self.bashwrapper.child.sendintr()
-            interrupted = True
-            self.bashwrapper._expect_prompt()
-            output = self.bashwrapper.child.before
-        except EOF:
-            output = self.bashwrapper.child.before + 'Restarting Bash'
-            self._start_bash()
-
-        if not silent:
+    def process_output(self, output):
+        if not self.silent:
             image_filenames, output = extract_image_filenames(output)
 
             # Send standard output
@@ -93,6 +121,29 @@ class BashKernel(Kernel):
                     self.send_response(self.iopub_socket, 'stream', message)
                 else:
                     self.send_response(self.iopub_socket, 'display_data', data)
+
+        
+    def do_execute(self, code, silent, store_history=True,
+                   user_expressions=None, allow_stdin=False):
+        self.silent = silent
+        if not code.strip():
+            return {'status': 'ok', 'execution_count': self.execution_count,
+                    'payload': [], 'user_expressions': {}}
+
+        interrupted = False
+        try:
+            # Note: timeout=None has special meaning for IREPLWrapper
+            output = self.bashwrapper.run_command(code.rstrip(), timeout=None)
+        except KeyboardInterrupt:
+            self.bashwrapper.child.sendintr()
+            interrupted = True
+            self.bashwrapper._expect_prompt()
+            output = self.bashwrapper.child.before
+        except EOF:
+            output = self.bashwrapper.child.before + 'Restarting Bash'
+            self._start_bash()
+
+        self.process_output(output)
 
         if interrupted:
             return {'status': 'abort', 'execution_count': self.execution_count}
