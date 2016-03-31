@@ -3,7 +3,7 @@ from pexpect import replwrap, EOF
 import pexpect
 
 from subprocess import check_output
-from os import path
+import os.path
 
 import base64
 import imghdr
@@ -19,25 +19,18 @@ from .images import (
     extract_image_filenames, display_data_for_image, image_setup_cmd
 )
 
-# An attempt was made to make this subclass for incremental output
-# work for the latest pexpect (ver 4.1), as well as pexpect version
-# 3.3, which gets installed when using the Anaconda installation
-# method that is recommended on the Jupyter installation page.
+# This subclass for incremental output requires Pexpect 4.
 class IREPLWrapper(replwrap.REPLWrapper):
     def __init__(self, cmd_or_spawn, orig_prompt, prompt_change,
                  extra_init_cmd=None, bkernel=None):
         self.bkernel = bkernel
-        replwrap.REPLWrapper.__init__(self, cmd_or_spawn, orig_prompt, prompt_change)
-        # extra_init_cmd can be passed in to REPLWrapper.__init__, however
-        # that parameter is not supported in older versions of pexpect. Therefore
-        # extra_init_cmd is run here:
-        self.run_command(extra_init_cmd)
+        replwrap.REPLWrapper.__init__(self, cmd_or_spawn, orig_prompt,
+                                      prompt_change, extra_init_cmd=extra_init_cmd)
 
     def _expect_prompt(self, timeout=-1):
-        if timeout == None or timeout == 1:
-            # "None" means we are executing code from a Jupyter cell.  The "timeout==1" case
-            # is a workaround for a problem in pexpect 3.3 that breaks incremental output.
-            # In either case, do incremental output:
+        if timeout == None:
+            # "None" means we are executing code from a Jupyter cell by way of the run_command
+            # in the do_execute() code below, so do incremental output.
             while True:
                 pos = self.child.expect_exact([self.prompt, self.continuation_prompt, '\r\n'],
                                               timeout=None)
@@ -90,17 +83,12 @@ class BashKernel(Kernel):
         sig = signal.signal(signal.SIGINT, signal.SIG_DFL)
         try:
             # Use IREPLWrapper, a subclass of REPLWrapper that gives
-            # incremental output specifically for bash_kernel.  Note
-            # that an earlier attempt code tried to use pexpect.spawn
-            # here failed because the encoding='utf-8' option was not
-            # supported on an earlier version of pexpect.
-            self.bashwrapper = IREPLWrapper("bash --norc",
-                                            u'\$', u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''",
+            # incremental output specifically for bash_kernel.
+            bashrc = os.path.join(os.path.dirname(pexpect.__file__), 'bashrc.sh')
+            child = pexpect.spawn("bash", ['--rcfile', bashrc], echo=False,
+                                  encoding='utf-8')
+            self.bashwrapper = IREPLWrapper(child, u'\$', u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''",
                                             extra_init_cmd="export PAGER=cat", bkernel=self)
-            # Execute .bashrc via the bashrc.sh wrapper provided with pexpect.
-            # (source command fails with harmless error if bashrc.sh is not installed)
-            bashrc = path.join(path.dirname(pexpect.__file__), 'bashrc.sh')
-            self.bashwrapper.run_command('source \'%s\'' % bashrc)
         finally:
             signal.signal(signal.SIGINT, sig)
 
