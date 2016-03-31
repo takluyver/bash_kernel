@@ -19,7 +19,6 @@ from .images import (
     extract_image_filenames, display_data_for_image, image_setup_cmd
 )
 
-# This subclass for incremental output requires Pexpect 4.
 class IREPLWrapper(replwrap.REPLWrapper):
     def __init__(self, cmd_or_spawn, orig_prompt, prompt_change,
                  extra_init_cmd=None, bkernel=None):
