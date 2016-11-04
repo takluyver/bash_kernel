@@ -83,10 +83,19 @@ class BashKernel(Kernel):
         try:
             # Use IREPLWrapper, a subclass of REPLWrapper that gives
             # incremental output specifically for bash_kernel.
+
+            # Note: the next few lines mirror functionality in the
+            # bash() function of pexpect/replwrap.py.  Look at the
+            # source code there for comments and context for
+            # understanding the code here.
             bashrc = os.path.join(os.path.dirname(pexpect.__file__), 'bashrc.sh')
             child = pexpect.spawn("bash", ['--rcfile', bashrc], echo=False,
                                   encoding='utf-8')
-            self.bashwrapper = IREPLWrapper(child, u'\$', u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''",
+            ps1 = replwrap.PEXPECT_PROMPT[:5] + u'\[\]' + replwrap.PEXPECT_PROMPT[5:]
+            ps2 = replwrap.PEXPECT_CONTINUATION_PROMPT[:5] + u'\[\]' + replwrap.PEXPECT_CONTINUATION_PROMPT[5:]
+            prompt_change = u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''".format(ps1, ps2)
+            
+            self.bashwrapper = IREPLWrapper(child, u'\$', prompt_change,
                                             extra_init_cmd="export PAGER=cat", bkernel=self)
         finally:
             signal.signal(signal.SIGINT, sig)
