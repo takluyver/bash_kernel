@@ -149,11 +149,11 @@ class BashKernel(Kernel):
             interrupted = True
             self.bashwrapper._expect_prompt()
             output = self.bashwrapper.child.before
+            self.process_output(output)
         except EOF:
             output = self.bashwrapper.child.before + 'Restarting Bash'
             self._start_bash()
-
-        self.process_output(output)
+            self.process_output(output)
 
         if interrupted:
             return {'status': 'abort', 'execution_count': self.execution_count}
