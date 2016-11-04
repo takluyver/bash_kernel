@@ -20,6 +20,14 @@ from .images import (
 )
 
 class IREPLWrapper(replwrap.REPLWrapper):
+    """A subclass of REPLWrapper that gives incremental output
+    specifically for bash_kernel.
+
+    The parameters are the same as for REPLWrapper, except for one
+    extra parameter:
+
+    :param bkkernel: The bash kernel object.
+    """
     def __init__(self, cmd_or_spawn, orig_prompt, prompt_change,
                  extra_init_cmd=None, bkernel=None):
         self.bkernel = bkernel
@@ -81,9 +89,6 @@ class BashKernel(Kernel):
         # so that bash and its children are interruptible.
         sig = signal.signal(signal.SIGINT, signal.SIG_DFL)
         try:
-            # Use IREPLWrapper, a subclass of REPLWrapper that gives
-            # incremental output specifically for bash_kernel.
-
             # Note: the next few lines mirror functionality in the
             # bash() function of pexpect/replwrap.py.  Look at the
             # source code there for comments and context for
@@ -94,7 +99,8 @@ class BashKernel(Kernel):
             ps1 = replwrap.PEXPECT_PROMPT[:5] + u'\[\]' + replwrap.PEXPECT_PROMPT[5:]
             ps2 = replwrap.PEXPECT_CONTINUATION_PROMPT[:5] + u'\[\]' + replwrap.PEXPECT_CONTINUATION_PROMPT[5:]
             prompt_change = u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''".format(ps1, ps2)
-            
+
+            # Using IREPLWrapper to get incremental output
             self.bashwrapper = IREPLWrapper(child, u'\$', prompt_change,
                                             extra_init_cmd="export PAGER=cat", bkernel=self)
         finally:
@@ -131,9 +137,11 @@ class BashKernel(Kernel):
 
         interrupted = False
         try:
-            # Note: timeout=None has special meaning for IREPLWrapper
-            output = self.bashwrapper.run_command(code.rstrip(), timeout=None)
-            output = "" # output was already sent by IREPLWrapper
+            # Note: timeout=None tells IREPLWrapper to do incremental
+            # output.  Also note that the return value from
+            # run_command is not needed, because the output was
+            # already sent by IREPLWrapper.
+            self.bashwrapper.run_command(code.rstrip(), timeout=None)
         except KeyboardInterrupt:
             self.bashwrapper.child.sendintr()
             interrupted = True
@@ -201,5 +209,3 @@ class BashKernel(Kernel):
         return {'matches': sorted(matches), 'cursor_start': start,
                 'cursor_end': cursor_pos, 'metadata': dict(),
                 'status': 'ok'}
-
-
