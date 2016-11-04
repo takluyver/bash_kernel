@@ -26,11 +26,12 @@ class IREPLWrapper(replwrap.REPLWrapper):
     The parameters are the same as for REPLWrapper, except for one
     extra parameter:
 
-    :param bkkernel: The bash kernel object.
+    :param line_output_callback: a callback method to receive each batch
+      of incremental output. It takes one string parameter.
     """
     def __init__(self, cmd_or_spawn, orig_prompt, prompt_change,
-                 extra_init_cmd=None, bkernel=None):
-        self.bkernel = bkernel
+                 extra_init_cmd=None, line_output_callback=None):
+        self.line_output_callback = line_output_callback
         replwrap.REPLWrapper.__init__(self, cmd_or_spawn, orig_prompt,
                                       prompt_change, extra_init_cmd=extra_init_cmd)
 
@@ -43,11 +44,11 @@ class IREPLWrapper(replwrap.REPLWrapper):
                                               timeout=None)
                 if pos == 2:
                     # End of line received
-                    self.bkernel.process_output(self.child.before + '\n')
+                    self.line_output_callback(self.child.before + '\n')
                 else:
                     if len(self.child.before) != 0:
                         # prompt received, but partial line precedes it
-                        self.bkernel.process_output(self.child.before)
+                        self.line_output_callback(self.child.before)
                     break
         else:
             # Otherwise, use existing non-incremental code
@@ -102,7 +103,8 @@ class BashKernel(Kernel):
 
             # Using IREPLWrapper to get incremental output
             self.bashwrapper = IREPLWrapper(child, u'\$', prompt_change,
-                                            extra_init_cmd="export PAGER=cat", bkernel=self)
+                                            extra_init_cmd="export PAGER=cat",
+                                            line_output_callback=self.process_output)
         finally:
             signal.signal(signal.SIGINT, sig)
 
