@@ -40,7 +40,7 @@ class IREPLWrapper(replwrap.REPLWrapper):
             # "None" means we are executing code from a Jupyter cell by way of the run_command
             # in the do_execute() code below, so do incremental output.
             while True:
-                pos = self.child.expect_exact([self.prompt, self.continuation_prompt, '\r\n'],
+                pos = self.child.expect_exact([self.prompt, self.continuation_prompt, u'\r\n'],
                                               timeout=None)
                 if pos == 2:
                     # End of line received
