@@ -5,13 +5,10 @@ import pexpect
 from subprocess import check_output
 import os.path
 
-import base64
-import imghdr
 import re
 import signal
-import urllib
 
-__version__ = '0.2'
+__version__ = '0.5'
 
 version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
