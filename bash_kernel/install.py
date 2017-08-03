@@ -1,7 +1,7 @@
 import json
 import os
 import sys
-import getopt
+import argparse
 
 from jupyter_client.kernelspec import KernelSpecManager
 from IPython.utils.tempdir import TemporaryDirectory
@@ -30,16 +30,39 @@ def _is_root():
         return False # assume not an admin on non-Unix platforms
 
 def main(argv=[]):
-    prefix = None
-    user = not _is_root()
+    parser = argparse.ArgumentParser(
+        description='Install KernelSpec for Bash Kernel'
+    )
+    prefix_locations = parser.add_mutually_exclusive_group()
 
-    opts, _ = getopt.getopt(argv[1:], '', ['user', 'prefix='])
-    for k, v in opts:
-        if k == '--user':
-            user = True
-        elif k == '--prefix':
-            prefix = v
-            user = False
+    prefix_locations.add_argument(
+        '--user',
+        help='Install KernelSpec in user homedirectory',
+        action='store_false' if _is_root() else 'store_true'
+    )
+    prefix_locations.add_argument(
+        '--sys-prefix',
+        help='Install KernelSpec in sys.prefix. Useful in conda / virtualenv',
+        action='store_true',
+        dest='sys_prefix'
+    )
+    prefix_locations.add_argument(
+        '--prefix',
+        help='Install KernelSpec in this prefix',
+        default=None
+    )
+
+    args = parser.parse_args()
+
+    if args.sys_prefix:
+        prefix = sys.prefix
+        user = None
+    elif args.user:
+        prefix = None
+        user = True
+    else:
+        prefix = args.prefix
+        user = None
 
     install_my_kernel_spec(user=user, prefix=prefix)
 
