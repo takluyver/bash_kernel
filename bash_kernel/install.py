@@ -29,7 +29,7 @@ def _is_root():
     except AttributeError:
         return False # assume not an admin on non-Unix platforms
 
-def main(argv=[]):
+def main(argv=None):
     parser = argparse.ArgumentParser(
         description='Install KernelSpec for Bash Kernel'
     )
@@ -38,7 +38,7 @@ def main(argv=[]):
     prefix_locations.add_argument(
         '--user',
         help='Install KernelSpec in user homedirectory',
-        action='store_false' if _is_root() else 'store_true'
+        action='store_true'
     )
     prefix_locations.add_argument(
         '--sys-prefix',
@@ -52,19 +52,18 @@ def main(argv=[]):
         default=None
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
+    user = False
+    prefix = None
     if args.sys_prefix:
         prefix = sys.prefix
-        user = None
-    elif args.user:
-        prefix = None
-        user = True
-    else:
+    elif args.prefix:
         prefix = args.prefix
-        user = None
+    elif args.user or not _is_root():
+        user = True
 
     install_my_kernel_spec(user=user, prefix=prefix)
 
 if __name__ == '__main__':
-    main(argv=sys.argv)
+    main()
