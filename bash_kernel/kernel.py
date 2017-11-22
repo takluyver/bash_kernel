@@ -32,6 +32,10 @@ class IREPLWrapper(replwrap.REPLWrapper):
         replwrap.REPLWrapper.__init__(self, cmd_or_spawn, orig_prompt,
                                       prompt_change, extra_init_cmd=extra_init_cmd)
 
+    def set_prompt(self, orig_prompt, prompt_change):
+        # Just write to the prompt without waiting
+        self.child.sendline(prompt_change)
+
     def _expect_prompt(self, timeout=-1):
         if timeout == None:
             # "None" means we are executing code from a Jupyter cell by way of the run_command
@@ -91,15 +95,12 @@ class BashKernel(Kernel):
             # bash() function of pexpect/replwrap.py.  Look at the
             # source code there for comments and context for
             # understanding the code here.
-            bashrc = os.path.join(os.path.dirname(pexpect.__file__), 'bashrc.sh')
-            child = pexpect.spawn("bash", ['--rcfile', bashrc], echo=False,
+            child = pexpect.spawn("bash", ['--login'], echo=False,
                                   encoding='utf-8', codec_errors='replace')
-            ps1 = replwrap.PEXPECT_PROMPT[:5] + u'\[\]' + replwrap.PEXPECT_PROMPT[5:]
-            ps2 = replwrap.PEXPECT_CONTINUATION_PROMPT[:5] + u'\[\]' + replwrap.PEXPECT_CONTINUATION_PROMPT[5:]
-            prompt_change = u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''".format(ps1, ps2)
+            prompt_change = u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''"
 
             # Using IREPLWrapper to get incremental output
-            self.bashwrapper = IREPLWrapper(child, u'\$', prompt_change,
+            self.bashwrapper = IREPLWrapper(child, u'\\$', prompt_change,
                                             extra_init_cmd="export PAGER=cat",
                                             line_output_callback=self.process_output)
         finally:
