@@ -1,0 +1,18 @@
+[build-system]
+requires = ["flit"]
+build-backend = "flit.buildapi"
+
+[tool.flit.metadata]
+module = "bash_kernel"
+author = "Thomas Kluyver"
+author-email = "thomas@kluyver.me.uk"
+home-page = "https://github.com/takluyver/bash_kernel"
+requires = ["pexpect (>=4.0)"]
+description-file = "README.rst"
+classifiers = [
+    "Framework :: IPython",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Shells",
+]
+
