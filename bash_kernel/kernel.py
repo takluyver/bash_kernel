@@ -27,8 +27,9 @@ class IREPLWrapper(replwrap.REPLWrapper):
       of incremental output. It takes one string parameter.
     """
     def __init__(self, cmd_or_spawn, orig_prompt, prompt_change,
-                 extra_init_cmd=None, line_output_callback=None):
+                 extra_init_cmd=None, line_output_callback=None, getpass=None):
         self.line_output_callback = line_output_callback
+        self.getpass = getpass
         replwrap.REPLWrapper.__init__(self, cmd_or_spawn, orig_prompt,
                                       prompt_change, extra_init_cmd=extra_init_cmd)
 
@@ -37,11 +38,31 @@ class IREPLWrapper(replwrap.REPLWrapper):
             # "None" means we are executing code from a Jupyter cell by way of the run_command
             # in the do_execute() code below, so do incremental output.
             while True:
-                pos = self.child.expect_exact([self.prompt, self.continuation_prompt, u'\r\n'],
-                                              timeout=None)
+                pos = self.child.expect_exact(
+                    [
+                        self.prompt,
+                        self.continuation_prompt,
+                        u'\r\n',
+                        u'[sudo] password for '
+                    ],
+                    timeout=None)
                 if pos == 2:
                     # End of line received
                     self.line_output_callback(self.child.before + '\n')
+                elif pos == 3:
+                    # raw string match, check to make sure we started at the beginning of the line
+                    if self.child.before:
+                        # We didn't, so just keep going
+                        self.line_output_callback(self.child.before + self.child.after)
+                        continue
+
+                    # Get the remainder of the line
+                    self.child.expect_exact(':')
+                    # Need to enter sudo password
+                    self.line_output_callback(
+                        '[sudo] password for ' + self.child.before + self.child.after + '\n')
+                    password = self.getpass()
+                    self.child.sendline(password)
                 else:
                     if len(self.child.before) != 0:
                         # prompt received, but partial line precedes it
@@ -78,6 +99,8 @@ class BashKernel(Kernel):
 
     def __init__(self, **kwargs):
         Kernel.__init__(self, **kwargs)
+        # Enable this to allow calling Kernel.getpass() for sudo passwords.
+        self._allow_stdin = True
         self._start_bash()
 
     def _start_bash(self):
@@ -101,7 +124,8 @@ class BashKernel(Kernel):
             # Using IREPLWrapper to get incremental output
             self.bashwrapper = IREPLWrapper(child, u'\$', prompt_change,
                                             extra_init_cmd="export PAGER=cat",
-                                            line_output_callback=self.process_output)
+                                            line_output_callback=self.process_output,
+                                            getpass=self.getpass)
         finally:
             signal.signal(signal.SIGINT, sig)
 
