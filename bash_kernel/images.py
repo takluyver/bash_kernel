@@ -38,7 +38,7 @@ def extract_image_filenames(output):
     image_filenames = []
 
     for line in output.split("\n"):
-        if line.startswith(_TEXT_SAVED_IMAGE):
+        if _TEXT_SAVED_IMAGE in line:
             filename = line.rstrip().split(": ")[-1]
             image_filenames.append(filename)
         else:
