@@ -107,6 +107,10 @@ class BashKernel(Kernel):
 
         # Register Bash function to write image data to temporary file
         self.bashwrapper.run_command(image_setup_cmd)
+        # Set TERM_PROGRAM and TERM_PROGAM_VERSION. See https://github.com/takluyver/bash_kernel/issues/117#issuecomment-1032738154
+        self.bashwrapper.run_command(f"export TERM_PROGRAM='jupyter_bash_kernel'; export TERM_PROGRAM_VERSION='{__version__}';")
+        # Disable bracketed paste (see https://github.com/takluyver/bash_kernel/issues/117)
+        self.bashwrapper.run_command("(bind 'set enable-bracketed-paste off' || true) >/dev/null 2>&1")
 
     def process_output(self, output):
         if not self.silent:
