@@ -7,7 +7,7 @@ module = "bash_kernel"
 author = "Thomas Kluyver"
 author-email = "thomas@kluyver.me.uk"
 home-page = "https://github.com/takluyver/bash_kernel"
-requires = ["pexpect (>=4.0)"]
+requires = ["pexpect (>=4.0)", "ipykernel"]
 description-file = "README.rst"
 classifiers = [
     "Framework :: IPython",
