@@ -105,8 +105,11 @@ class BashKernel(Kernel):
         finally:
             signal.signal(signal.SIGINT, sig)
 
+        # Disable bracketed paste (see <https://github.com/takluyver/bash_kernel/issues/117>)
+        self.bashwrapper.run_command("bind 'set enable-bracketed-paste off' >/dev/null 2>&1 || true")
         # Register Bash function to write image data to temporary file
         self.bashwrapper.run_command(image_setup_cmd)
+
 
     def process_output(self, output):
         if not self.silent:
