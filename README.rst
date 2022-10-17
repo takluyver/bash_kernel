@@ -19,6 +19,15 @@ To use it, run one of:
     jupyter qtconsole --kernel bash
     jupyter console --kernel bash
 
+The kernel exports two handy bash functions: `display` to display images; `displayHTML` to display HTML content.
+
+Example:
+
+.. code:: shell
+
+    cat dog.png | display
+    echo "<b>Dog</b>, not a cat." | displayHTML
+
 For details of how this works, see the Jupyter docs on `wrapper kernels
 <http://jupyter-client.readthedocs.org/en/latest/wrapperkernels.html>`_, and
 Pexpect's docs on the `replwrap module

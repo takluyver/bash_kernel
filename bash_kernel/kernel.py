@@ -12,8 +12,8 @@ __version__ = '0.8.0'
 
 version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
-from .images import (
-    extract_image_filenames, display_data_for_image, image_setup_cmd
+from .display import (
+    CONTENT_DATA_PREFIXES, extract_data_filenames, build_cmds
 )
 
 class IREPLWrapper(replwrap.REPLWrapper):
@@ -108,7 +108,7 @@ class BashKernel(Kernel):
         # Disable bracketed paste (see <https://github.com/takluyver/bash_kernel/issues/117>)
         self.bashwrapper.run_command("bind 'set enable-bracketed-paste off' >/dev/null 2>&1 || true")
         # Register Bash function to write image data to temporary file
-        self.bashwrapper.run_command(image_setup_cmd)
+        self.bashwrapper.run_command(build_cmds())
 
 
     def process_output(self, output):
@@ -120,14 +120,16 @@ class BashKernel(Kernel):
             self.send_response(self.iopub_socket, 'stream', stream_content)
 
             # Send images, if any
-            for filename in filenames[]:
-                try:
-                    data = display_data_for_image(filename)
-                except ValueError as e:
-                    message = {'name': 'stdout', 'text': str(e)}
-                    self.send_response(self.iopub_socket, 'stream', message)
-                else:
-                    self.send_response(self.iopub_socket, 'display_data', data)
+            for key, info in CONTENT_DATA_PREFIXES.items():
+                for filename in filenames[key]:
+                    try:
+                        data = info['display_data_fn'](filename)
+                    except ValueError as e:
+                        message = {'name': 'stderr', 'text': str(e)}
+                        self.send_response(self.iopub_socket, 'stream', message)
+                    else:
+                        self.send_response(self.iopub_socket, 'display_data', data)
+
 
 
     def do_execute(self, code, silent, store_history=True,
