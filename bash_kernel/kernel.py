@@ -113,14 +113,14 @@ class BashKernel(Kernel):
 
     def process_output(self, output):
         if not self.silent:
-            image_filenames, output = extract_image_filenames(output)
+            filenames, output = extract_data_filenames(output)
 
             # Send standard output
             stream_content = {'name': 'stdout', 'text': output}
             self.send_response(self.iopub_socket, 'stream', stream_content)
 
             # Send images, if any
-            for filename in image_filenames:
+            for filename in filenames[]:
                 try:
                     data = display_data_for_image(filename)
                 except ValueError as e:
