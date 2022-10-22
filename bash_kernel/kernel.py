@@ -37,11 +37,14 @@ class IREPLWrapper(replwrap.REPLWrapper):
             # "None" means we are executing code from a Jupyter cell by way of the run_command
             # in the do_execute() code below, so do incremental output.
             while True:
-                pos = self.child.expect_exact([self.prompt, self.continuation_prompt, u'\r\n'],
+                pos = self.child.expect_exact([self.prompt, self.continuation_prompt, u'\r\n', u'\n', u'\r'],
                                               timeout=None)
-                if pos == 2:
+                if pos == 2 or pos == 3:
                     # End of line received
                     self.line_output_callback(self.child.before + '\n')
+                elif pos == 4:
+                    # End of line received
+                    self.line_output_callback(self.child.before + '\r')
                 else:
                     if len(self.child.before) != 0:
                         # prompt received, but partial line precedes it
