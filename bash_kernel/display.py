@@ -114,7 +114,7 @@ def extract_data_filenames(output):
         matched = False
         for key in CONTENT_DATA_PREFIXES.keys():
             if line.startswith(key):
-                filename = line[len(key):len(key)-1]
+                filename = line[len(key):-1]
                 filenames[key].append(filename)
                 matched = True
                 break
