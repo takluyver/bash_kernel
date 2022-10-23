@@ -59,11 +59,11 @@ Programmatically Generating Rich Content
 ----------------------------------------
 
 Alternatively one can simply generate the rich content to a file in /tmp (or $TMPDIR)
-and then output the corresponding (to the mimetype) context prefix `_TEXT_SAVED_*`
+and then output the corresponding (to the mimetype) context prefix "_TEXT_SAVED_*"
 constant. So one can write programs (C++, Go, Rust, etc.) that generates rich content
 appropriately, when within a notebook.
 
-The environment variable `NOTEBOOK_BASH_KERNEL_CAPABILITIES` will be set with a comma
+The environment variable "NOTEBOOK_BASH_KERNEL_CAPABILITIES" will be set with a comma
 separated list of the supported types (currently "image,html,javascript") that a program
 can check for.
 
