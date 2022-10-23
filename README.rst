@@ -43,14 +43,14 @@ should be a string name (downstream documentation is not clear on this), and the
 will be replaced by the new value. Example:
 
 .. code:: shell
+
     display_id="id_${RANDOM}"
     ((ii=0))
     while ((ii < 10)) ; do
-        echo "<div>${ii}<script></div>" | displayHTML $display_id
+        echo "<div>${ii}</div>" | displayHTML $display_id
         ((ii = ii+1))
         sleep 1
     done
-    echo
 
 Remember to create a new id each time the cell is executed.javascript. The same
 will work for images or even javascript content.
