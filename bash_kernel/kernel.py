@@ -4,6 +4,7 @@ import pexpect
 
 from subprocess import check_output
 import os.path
+import uuid
 
 import re
 import signal
@@ -12,9 +13,7 @@ __version__ = '0.8.0'
 
 version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
-from .display import (
-    CONTENT_DATA_PREFIXES, extract_data_filenames, build_cmds
-)
+from .display import (extract_contents, build_cmds)
 
 class IREPLWrapper(replwrap.REPLWrapper):
     """A subclass of REPLWrapper that gives incremental output
@@ -82,6 +81,7 @@ class BashKernel(Kernel):
     def __init__(self, **kwargs):
         Kernel.__init__(self, **kwargs)
         self._start_bash()
+        self._known_display_ids = set()
 
     def _start_bash(self):
         # Signal handlers are inherited by forked processes, and we can't easily
@@ -116,24 +116,37 @@ class BashKernel(Kernel):
 
     def process_output(self, output):
         if not self.silent:
-            filenames, output = extract_data_filenames(output)
+            plain_output, rich_contents = extract_contents(output)
 
             # Send standard output
-            stream_content = {'name': 'stdout', 'text': output}
-            self.send_response(self.iopub_socket, 'stream', stream_content)
+            if plain_output:
+                stream_content = {'name': 'stdout', 'text': plain_output}
+                self.send_response(self.iopub_socket, 'stream', stream_content)
 
-            # Send images, if any
-            for key, info in CONTENT_DATA_PREFIXES.items():
-                for filename in filenames[key]:
-                    try:
-                        data = info['display_data_fn'](filename)
-                    except ValueError as e:
-                        message = {'name': 'stderr', 'text': str(e)}
-                        self.send_response(self.iopub_socket, 'stream', message)
+            # Send rich contents, if any:
+            for content in rich_contents:
+                if isinstance(content, Exception):
+                    message = {'name': 'stderr', 'text': str(e)}
+                    self.send_response(self.iopub_socket, 'stream', message)
+                else:
+                    if 'transient' in content and 'display_id' in content['transient']:
+                        self._send_content_to_display_id(content)
                     else:
-                        self.send_response(self.iopub_socket, 'display_data', data)
+                        self.send_response(self.iopub_socket, 'display_data', content)
 
-
+    def _send_content_to_display_id(self, content):
+        """If display_id is not known, use "display_data", otherwise "update_display_data"."""
+        # Notice this is imperfect, because when re-running the same cell, a previously
+        # "known" `display_id` ceases to exist, and the "update_display_data" will fail.
+        # But there is no way to figure out if the cell with `display_id` already exists.
+        # The solution is to the user always to generate a new display_id for a cell.
+        display_id = content['transient']['display_id']
+        if display_id in self._known_display_ids:
+            msg_type = 'update_display_data'
+        else:
+            msg_type = 'display_data'
+            self._known_display_ids.add(display_id)
+        self.send_response(self.iopub_socket, msg_type, content)
 
     def do_execute(self, code, silent, store_history=True,
                    user_expressions=None, allow_stdin=False):
