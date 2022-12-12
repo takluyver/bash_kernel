@@ -142,19 +142,29 @@ def display_data_for_js(filename):
     return content
 
 def split_lines(text):
-    """Split lines on '\n' or '\r', preserving the ending."""
-    # This allows programs that display things like progress bars, using \r for
-    # carriage return (updating the same line) to work.
+    """Split lines on '\n' or '\r', preserving the ending (end-of-line/line-feed or carriage-return)."""
+    # lines_and_endings will alternate between the line content and a line separator (end-of-line or carriage-return),
+    # We loop over these putting together again the line contents and one lines+ending, special
+    # casing when we have '\r\n' (may still be used in DOS/Windows).
     lines_and_endings = re.split('([\r\n])', text)
-    lines = []
+    if lines_and_endings[-1] == '':
+        # re.split will add a spurious empty part in the end, if the text ends in '\r' or '\n'.
+        lines_and_endings = lines_and_endings[:-1]
     num_parts = len(lines_and_endings)
-    for ii in range(int((num_parts+1)/2)):
-      if ii*2+1 < num_parts:
-        lines.append(lines_and_endings[ii*2]+lines_and_endings[ii*2+1])
-      elif lines_and_endings[ii*2] != '':
-        lines.append(lines_and_endings[ii*2]+'\n')
+    lines = []
+    ii = 0
+    while ii < num_parts:
+        content = lines_and_endings[ii]
+        ending = '\n'
+        if ii+1 < num_parts:
+            ending = lines_and_endings[ii+1]
+            # Special case old DOS end of line sequence '\r\n':
+            if ii+3 < num_parts and ending == '\r' and lines_and_endings[ii+2] == '' and lines_and_endings[ii+3] == '\n':
+                ending = '\n'  # Replace by a single end-of-line/line-feed.
+                ii += 2   # Skip the empty line content between the '\r' and '\n'
+        lines.append(content+ending)
+        ii += 2  # Skip to next content+ending parts.
     return lines
-
 
 def extract_contents(output):
     """Returns plain_output string and a list of rich content data."""

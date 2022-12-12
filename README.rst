@@ -38,7 +38,7 @@ Example:
 Updating Rich Content Cells
 ---------------------------
 
-If one is doing something that requires dynamic updates, one can specify a display_id,
+If one is doing something that requires dynamic updates, one can specify a unique display_id,
 should be a string name (downstream documentation is not clear on this), and the contents
 will be replaced by the new value. Example:
 
@@ -52,8 +52,10 @@ will be replaced by the new value. Example:
         sleep 1
     done
 
-Remember to create a new id each time the cell is executed.javascript. The same
-will work for images or even javascript content.
+The same works for images or even javascript content.
+
+**Remember to create always a new id** (random ids works perfect) each time the cell is executed, otherwise
+it will try to display on an HTML element that no longer exists (they are erased each time a cell is re-run).
 
 Programmatically Generating Rich Content
 ----------------------------------------

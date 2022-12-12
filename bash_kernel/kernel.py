@@ -39,14 +39,14 @@ class IREPLWrapper(replwrap.REPLWrapper):
                 pos = self.child.expect_exact([self.prompt, self.continuation_prompt, u'\r\n', u'\n', u'\r'],
                                               timeout=None)
                 if pos == 2 or pos == 3:
-                    # End of line received
+                    # End of line received.
                     self.line_output_callback(self.child.before + '\n')
                 elif pos == 4:
-                    # End of line received
+                    # Carriage return ('\r') received.
                     self.line_output_callback(self.child.before + '\r')
                 else:
                     if len(self.child.before) != 0:
-                        # prompt received, but partial line precedes it
+                        # Prompt received, but partial line precedes it.
                         self.line_output_callback(self.child.before)
                     break
         else:
@@ -136,10 +136,15 @@ class BashKernel(Kernel):
 
     def _send_content_to_display_id(self, content):
         """If display_id is not known, use "display_data", otherwise "update_display_data"."""
-        # Notice this is imperfect, because when re-running the same cell, a previously
-        # "known" `display_id` ceases to exist, and the "update_display_data" will fail.
-        # But there is no way to figure out if the cell with `display_id` already exists.
-        # The solution is to the user always to generate a new display_id for a cell.
+        # Notice this is imperfect, because when re-running the same cell, the output cell
+        # is destroyed and the div element (the html tag) with the display_id no longer exists. But the
+        # `update_display_data` function has no way of knowing this, and thinks that the
+        # display_id still exists and will try, and fail to update it (as opposed to re-create
+        # the div with the display_id).
+        #
+        # The solution is to have the user always to generate a new display_id for a cell: this
+        # way `update_display_data` will not have seen the display_id when the cell is re-run and
+        # correctly creates the new div element.
         display_id = content['transient']['display_id']
         if display_id in self._known_display_ids:
             msg_type = 'update_display_data'
