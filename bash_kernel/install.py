@@ -37,7 +37,7 @@ def main(argv=None):
 
     prefix_locations.add_argument(
         '--user',
-        help='Install KernelSpec in user homedirectory',
+        help='Install KernelSpec in user\'s home directory',
         action='store_true'
     )
     prefix_locations.add_argument(

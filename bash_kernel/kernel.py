@@ -4,6 +4,7 @@ import pexpect
 
 from subprocess import check_output
 import os.path
+import uuid
 
 import re
 import signal
@@ -12,9 +13,7 @@ __version__ = '0.8.0'
 
 version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
-from .images import (
-    extract_image_filenames, display_data_for_image, image_setup_cmd
-)
+from .display import (extract_contents, build_cmds)
 
 class IREPLWrapper(replwrap.REPLWrapper):
     """A subclass of REPLWrapper that gives incremental output
@@ -37,14 +36,17 @@ class IREPLWrapper(replwrap.REPLWrapper):
             # "None" means we are executing code from a Jupyter cell by way of the run_command
             # in the do_execute() code below, so do incremental output.
             while True:
-                pos = self.child.expect_exact([self.prompt, self.continuation_prompt, u'\r\n'],
+                pos = self.child.expect_exact([self.prompt, self.continuation_prompt, u'\r\n', u'\n', u'\r'],
                                               timeout=None)
-                if pos == 2:
-                    # End of line received
+                if pos == 2 or pos == 3:
+                    # End of line received.
                     self.line_output_callback(self.child.before + '\n')
+                elif pos == 4:
+                    # Carriage return ('\r') received.
+                    self.line_output_callback(self.child.before + '\r')
                 else:
                     if len(self.child.before) != 0:
-                        # prompt received, but partial line precedes it
+                        # Prompt received, but partial line precedes it.
                         self.line_output_callback(self.child.before)
                     break
         else:
@@ -79,6 +81,7 @@ class BashKernel(Kernel):
     def __init__(self, **kwargs):
         Kernel.__init__(self, **kwargs)
         self._start_bash()
+        self._known_display_ids = set()
 
     def _start_bash(self):
         # Signal handlers are inherited by forked processes, and we can't easily
@@ -108,27 +111,47 @@ class BashKernel(Kernel):
         # Disable bracketed paste (see <https://github.com/takluyver/bash_kernel/issues/117>)
         self.bashwrapper.run_command("bind 'set enable-bracketed-paste off' >/dev/null 2>&1 || true")
         # Register Bash function to write image data to temporary file
-        self.bashwrapper.run_command(image_setup_cmd)
+        self.bashwrapper.run_command(build_cmds())
 
 
     def process_output(self, output):
         if not self.silent:
-            image_filenames, output = extract_image_filenames(output)
+            plain_output, rich_contents = extract_contents(output)
 
             # Send standard output
-            stream_content = {'name': 'stdout', 'text': output}
-            self.send_response(self.iopub_socket, 'stream', stream_content)
+            if plain_output:
+                stream_content = {'name': 'stdout', 'text': plain_output}
+                self.send_response(self.iopub_socket, 'stream', stream_content)
 
-            # Send images, if any
-            for filename in image_filenames:
-                try:
-                    data = display_data_for_image(filename)
-                except ValueError as e:
-                    message = {'name': 'stdout', 'text': str(e)}
+            # Send rich contents, if any:
+            for content in rich_contents:
+                if isinstance(content, Exception):
+                    message = {'name': 'stderr', 'text': str(e)}
                     self.send_response(self.iopub_socket, 'stream', message)
                 else:
-                    self.send_response(self.iopub_socket, 'display_data', data)
+                    if 'transient' in content and 'display_id' in content['transient']:
+                        self._send_content_to_display_id(content)
+                    else:
+                        self.send_response(self.iopub_socket, 'display_data', content)
 
+    def _send_content_to_display_id(self, content):
+        """If display_id is not known, use "display_data", otherwise "update_display_data"."""
+        # Notice this is imperfect, because when re-running the same cell, the output cell
+        # is destroyed and the div element (the html tag) with the display_id no longer exists. But the
+        # `update_display_data` function has no way of knowing this, and thinks that the
+        # display_id still exists and will try, and fail to update it (as opposed to re-create
+        # the div with the display_id).
+        #
+        # The solution is to have the user always to generate a new display_id for a cell: this
+        # way `update_display_data` will not have seen the display_id when the cell is re-run and
+        # correctly creates the new div element.
+        display_id = content['transient']['display_id']
+        if display_id in self._known_display_ids:
+            msg_type = 'update_display_data'
+        else:
+            msg_type = 'display_data'
+            self._known_display_ids.add(display_id)
+        self.send_response(self.iopub_socket, msg_type, content)
 
     def do_execute(self, code, silent, store_history=True,
                    user_expressions=None, allow_stdin=False):
