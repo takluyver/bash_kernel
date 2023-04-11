@@ -9,6 +9,8 @@ Installation
 ------------
 This requires IPython 3.
 
+.. code:: shell
+
     pip install bash_kernel
     python -m bash_kernel.install
 
