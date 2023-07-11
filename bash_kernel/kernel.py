@@ -191,7 +191,8 @@ class BashKernel(Kernel):
             # output.  Also note that the return value from
             # run_command is not needed, because the output was
             # already sent by IREPLWrapper.
-            self.bashwrapper.run_command(code.rstrip(), timeout=None)
+            code_rstripped = code.rstrip("\\ \t\n\r\f\v")
+            self.bashwrapper.run_command(code_rstripped, timeout=None)
         except KeyboardInterrupt:
             self.bashwrapper.child.sendintr()
             interrupted = True
