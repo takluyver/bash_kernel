@@ -2,9 +2,12 @@ import json
 import os
 import sys
 import argparse
+import pathlib
+import shutil
 
 from jupyter_client.kernelspec import KernelSpecManager
 from IPython.utils.tempdir import TemporaryDirectory
+from .resources import _ICON_PATH
 
 kernel_json = {"argv":[sys.executable,"-m","bash_kernel", "-f", "{connection_file}"],
  "display_name":"Bash",
@@ -18,8 +21,10 @@ def install_my_kernel_spec(user=True, prefix=None):
         os.chmod(td, 0o755) # Starts off as 700, not user readable
         with open(os.path.join(td, 'kernel.json'), 'w') as f:
             json.dump(kernel_json, f, sort_keys=True)
-        # TODO: Copy resources once they're specified
-
+        shutil.copyfile(
+            _ICON_PATH,
+            pathlib.Path(td) / _ICON_PATH.name
+        )
         print('Installing IPython kernel spec')
         KernelSpecManager().install_kernel_spec(td, 'bash', user=user, prefix=prefix)
 
