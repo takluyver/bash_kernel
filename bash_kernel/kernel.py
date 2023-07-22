@@ -214,7 +214,7 @@ class BashKernel(Kernel):
         # like var="/etc/<tab>", which should complete from /etc/.
         # Let's just hope no one makes a habit of puting =/"/' into file names
         # </naievity>  (blame @kdm9 if it breaks)
-        tokens = re.split("[\t \n;=\"']+", code)
+        tokens = re.split("[\t \n;=\"'><]+", code)
         token = tokens[-1]
         start = cursor_pos - len(token)
         if token and token[0] == '$':
