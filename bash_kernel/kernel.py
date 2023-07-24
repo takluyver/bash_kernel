@@ -109,7 +109,11 @@ class BashKernel(Kernel):
         # reset it from the subprocess. Since kernelapp ignores SIGINT except in
         # message handlers, we need to temporarily reset the SIGINT handler here
         # so that bash and its children are interruptible.
-        sig = signal.signal(signal.SIGINT, signal.SIG_DFL)
+        old_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_DFL)
+        # We need to temporarily reset the default signal handler for SIGPIPE so
+        # that commands like `head` used in a pipe chain can signal to the data
+        # producers. 
+        old_sigpipe_handler = signal.signal(signal.SIGPIPE, signal.SIG_DFL)
         try:
             # Note: the next few lines mirror functionality in the
             # bash() function of pexpect/replwrap.py.  Look at the
@@ -131,7 +135,8 @@ class BashKernel(Kernel):
                                             extra_init_cmd="export PAGER=cat",
                                             line_output_callback=self.process_output)
         finally:
-            signal.signal(signal.SIGINT, sig)
+            signal.signal(signal.SIGINT, old_sigint_handler)
+            signal.signal(signal.SIGPIPE, old_sigpipe_handler)
 
         # Disable bracketed paste (see <https://github.com/takluyver/bash_kernel/issues/117>)
         self.bashwrapper.run_command("bind 'set enable-bracketed-paste off' >/dev/null 2>&1 || true")
