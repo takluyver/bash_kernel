@@ -190,6 +190,18 @@ class BashKernel(Kernel):
             return {'status': 'ok', 'execution_count': self.execution_count,
                     'payload': [], 'user_expressions': {}}
 
+        
+        if code.strip().endswith("\\"):
+            error_content = {
+                'ename': '',
+                'evalue': "Cell has trailing backslash",
+                'traceback': []
+            }
+            self.send_response(self.iopub_socket, 'error', error_content)
+            error_content['execution_count'] = self.execution_count
+            error_content['status'] = 'error'
+            return error_content
+
         interrupted = False
         try:
             # Note: timeout=None tells IREPLWrapper to do incremental
