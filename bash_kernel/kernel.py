@@ -249,18 +249,17 @@ class BashKernel(Kernel):
                    'cursor_end': cursor_pos, 'metadata': dict(),
                    'status': 'ok'}
 
-        if not code or code[-1] == ' ':
-            return default
-
-        tokens = code.replace(';', ' ').split()
-        if not tokens:
-            return default
 
         matches = []
+        # The regex below might cause issues, but is designed to allow
+        # completion on the rhs of a variable assignment and within strings,
+        # like var="/etc/<tab>", which should complete from /etc/.
+        # Let's just hope no one makes a habit of puting =/"/' into file names
+        # </naievity>  (blame @kdm9 if it breaks)
+        tokens = re.split("[\t \n;=\"'><]+", code)
         token = tokens[-1]
         start = cursor_pos - len(token)
-
-        if token[0] == '$':
+        if token and token[0] == '$':
             # complete variables
             cmd = 'compgen -A arrayvar -A export -A variable %s' % token[1:] # strip leading $
             output = self.bashwrapper.run_command(cmd).rstrip()
@@ -268,10 +267,32 @@ class BashKernel(Kernel):
             # append matches including leading $
             matches.extend(['$'+c for c in completions])
         else:
-            # complete functions and builtins
-            cmd = 'compgen -cdfa %s' % token
+            # complete path 
+            cmd = 'compgen -d -S / %s' % token
             output = self.bashwrapper.run_command(cmd).rstrip()
-            matches.extend(output.split())
+            dirs = list(set(output.split()))
+            cmd = 'compgen -f %s' % token
+            output = self.bashwrapper.run_command(cmd).rstrip()
+            filesanddirs = list(set(output.split()))
+            files = [x for x in filesanddirs if x + "/" not in dirs]
+            if '/' not in token:
+                # Add an explict ./ for relative paths
+                matches.extend(["./" + x for x in files + dirs])
+            else:
+                matches.extend(files)
+                matches.extend(dirs)
+        if '/' not in token and code[-1] != '"':
+            # complete anything command-like (avoid annoying errors where command names get completed after a directory)
+            cmd = 'compgen -abc -A function %s' % token
+            output = self.bashwrapper.run_command(cmd).rstrip()
+            matches.extend(list(set(output.split())))
+        if code[-1] == '"':
+            # complete variables
+            cmd = 'compgen -A arrayvar -A export -A variable %s' % token[1:] # strip leading $
+            output = self.bashwrapper.run_command(cmd).rstrip()
+            completions = set(output.split())
+            # append matches including leading $
+            matches.extend(['$'+c for c in completions])
 
         if not matches:
             return default
