@@ -224,7 +224,7 @@ class BashKernel(Kernel):
             return {'status': 'abort', 'execution_count': self.execution_count}
 
         try:
-            exitcode = int(self.bashwrapper.run_command('echo $?').rstrip().split("\r\n")[0])
+            exitcode = int(self.bashwrapper.run_command('{ echo $?; } 2>/dev/null').rstrip().split("\r\n")[0])
         except Exception as exc:
             exitcode = 1
 
