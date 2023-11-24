@@ -11,7 +11,7 @@ import string
 import re
 import signal
 
-__version__ = '0.9.1.2'
+__version__ = '0.9.2'
 
 version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
