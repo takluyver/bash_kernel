@@ -17,6 +17,12 @@ version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
 from .display import (extract_contents, build_cmds)
 
+# Special command patterns
+su = "(sudo )? *su( +|$).*"
+sudo = "sudo .+"
+bash = "(sudo )? *(chroot |env )?(.* )?bash( +|$).*"
+special_commands = [su, sudo, bash] if os.getenv("BASH_KERNEL_SPECIAL_COMMANDS") is not None else []
+
 class IREPLWrapper(replwrap.REPLWrapper):
     """A subclass of REPLWrapper that gives incremental output
     specifically for bash_kernel.
@@ -28,9 +34,12 @@ class IREPLWrapper(replwrap.REPLWrapper):
       of incremental output. It takes one string parameter.
     """
     def __init__(self, cmd_or_spawn, orig_prompt, prompt_change, unique_prompt,
-                 extra_init_cmd=None, line_output_callback=None):
+                 extra_init_cmd=None, line_output_callback=None, getpass=None):
+        self.prompt_change = prompt_change
+        self.extra_init_cmd = extra_init_cmd
         self.unique_prompt = unique_prompt
         self.line_output_callback = line_output_callback
+        self.getpass = getpass
         # The extra regex at the start of PS1 below is designed to catch the
         # `(envname) ` which conda/mamba add to the start of PS1 by default.
         # Obviously anything else that looks like this, including user output,
@@ -74,6 +83,68 @@ class IREPLWrapper(replwrap.REPLWrapper):
         # Prompt received, so return normally
         return pos
 
+    def special_command(self, code):
+
+        # Some supported cases for su, env and chroot commands
+        if re.match(su, code):
+            code += " -s /bin/bash"
+
+        # Send code
+        self.child.sendline(code)
+
+        # If there is not need to wait for the password prompt
+        if re.match(bash, code) and re.match(sudo, code) is None:
+            self.child.sendline(self.prompt_change)
+
+        prompts = [self.ps1_re, self.ps2_re,
+                   u"Password", u"\[sudo\] password for ",
+                   u"New password",
+                   u"Retype new password",
+                   u"Authentication failure",
+                   u"incorrect password attempts",
+                   " all the required fields",
+                   "chroot: cannot change root directory to",
+                   "passwd: password updated successfully",
+                   "passwd: password unchanged"]
+        timeout = 1
+        while True:
+            try:
+                pos = self.child.expect_list([re.compile(x) for x in prompts], timeout=timeout)
+                if pos in [2, 3, 4, 5]:
+                    if self.child.before:   # To print Sorry, try again. when sudo password is wrong
+                        self.line_output_callback(self.child.before)
+                    self.child.expect_exact(':')
+                    self.line_output_callback(prompts[pos].replace("\\", "") + self.child.before + self.child.after + '\n')
+                    password = self.getpass()
+                    self.child.sendline(password)
+                    timeout = None  # Ensure we wait long enough to catch wrong password cases
+                elif pos in [6, 7, 8, 9, 10, 11]:
+                    if pos == 9:
+                        self.child.expect_exact(':')
+                        self.line_output_callback(prompts[pos] + self.child.before + self.child.after + '\n')
+                    else:
+                        self.line_output_callback(self.child.before + self.child.after + '\n')
+                    self._expect_prompt(1)
+                    self._expect_prompt(1)
+                    return
+                else:
+                    if len(self.child.before) != 0 and re.match(bash, code) is None and re.match(su, code) is None:
+                        # Prompt received, but partial line precedes it.
+                        self.line_output_callback(self.child.before)
+                    break
+
+                if re.match(bash, code) is not None or re.match(su, code) is not None:
+                    self.child.sendline(self.prompt_change)
+            except:
+                # Required for sudo su if not prompted for password
+                self.child.sendline(self.prompt_change)
+
+        # Initialization
+        if re.match(su, code) or re.match(bash, code):
+            self.run_command(self.extra_init_cmd)
+            self.run_command("bind 'set enable-bracketed-paste off' >/dev/null 2>&1 || true")
+            # self.run_command(build_cmds())
+
 class BashKernel(Kernel):
     implementation = 'bash_kernel'
     implementation_version = __version__
@@ -103,6 +174,8 @@ class BashKernel(Kernel):
         Kernel.__init__(self, **kwargs)
         self._start_bash()
         self._known_display_ids = set()
+        # Enable this to allow calling Kernel.getpass() for passwords.
+        self._allow_stdin = True
 
     def _start_bash(self):
         # Signal handlers are inherited by forked processes, and we can't easily
@@ -133,7 +206,8 @@ class BashKernel(Kernel):
             # Using IREPLWrapper to get incremental output
             self.bashwrapper = IREPLWrapper(child, u'\$', prompt_change, self.unique_prompt,
                                             extra_init_cmd="export PAGER=cat",
-                                            line_output_callback=self.process_output)
+                                            line_output_callback=self.process_output,
+                                            getpass=self.getpass)
         finally:
             signal.signal(signal.SIGINT, old_sigint_handler)
             signal.signal(signal.SIGPIPE, old_sigpipe_handler)
@@ -145,7 +219,7 @@ class BashKernel(Kernel):
 
 
     def process_output(self, output):
-        if not self.silent:
+        if hasattr(self, "silent") and not self.silent:
             plain_output, rich_contents = extract_contents(output)
 
             # Send standard output
@@ -156,7 +230,7 @@ class BashKernel(Kernel):
             # Send rich contents, if any:
             for content in rich_contents:
                 if isinstance(content, Exception):
-                    message = {'name': 'stderr', 'text': str(e)}
+                    message = {'name': 'stderr', 'text': str(content)}
                     self.send_response(self.iopub_socket, 'stream', message)
                 else:
                     if 'transient' in content and 'display_id' in content['transient']:
@@ -190,7 +264,7 @@ class BashKernel(Kernel):
             return {'status': 'ok', 'execution_count': self.execution_count,
                     'payload': [], 'user_expressions': {}}
 
-        
+
         if code.strip().endswith("\\"):
             error_content = {
                 'ename': '',
@@ -204,11 +278,14 @@ class BashKernel(Kernel):
 
         interrupted = False
         try:
-            # Note: timeout=None tells IREPLWrapper to do incremental
-            # output.  Also note that the return value from
-            # run_command is not needed, because the output was
-            # already sent by IREPLWrapper.
-            self.bashwrapper.run_command(code.rstrip(), timeout=None)
+            if True in [re.match(cmd, code.rstrip()) is not None for cmd in special_commands]:
+                self.bashwrapper.special_command(code.rstrip())
+            else:
+                # Note: timeout=None tells IREPLWrapper to do incremental
+                # output.  Also note that the return value from
+                # run_command is not needed, because the output was
+                # already sent by IREPLWrapper.
+                self.bashwrapper.run_command(code.rstrip(), timeout=None)
         except KeyboardInterrupt:
             self.bashwrapper.child.sendintr()
             interrupted = True
