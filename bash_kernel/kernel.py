@@ -18,10 +18,12 @@ version_pat = re.compile(r'version (\d+(\.\d+)+)')
 from .display import (extract_contents, build_cmds)
 
 # Special command patterns
-su = "(sudo )? *su( +|$).*"
-sudo = "sudo .+"
-bash = "(sudo )? *(chroot |env )?(.* )?bash( +|$).*"
-special_commands = [su, sudo, bash] if os.getenv("BASH_KERNEL_SPECIAL_COMMANDS") is not None else []
+su = re.compile("(sudo )? *((\/usr)?\/bin\/)?su( +|$).*")
+env = re.compile("(sudo )? *((\/usr)?\/bin\/)?(chroot |env )(.* )?((\/usr)?\/bin\/)?bash( +|$).*")
+bash = re.compile("(sudo )? *((\/usr)?\/bin\/)?bash( +|$).*")
+passwd = re.compile("(sudo )? *((\/usr)?\/bin\/)?passwd( +|$).*")
+sudo = re.compile("sudo .+")
+special_commands = [su, env, bash, passwd, sudo] if os.getenv("BASH_KERNEL_SPECIAL_COMMANDS") is not None else []
 
 class IREPLWrapper(replwrap.REPLWrapper):
     """A subclass of REPLWrapper that gives incremental output
@@ -86,14 +88,14 @@ class IREPLWrapper(replwrap.REPLWrapper):
     def special_command(self, code):
 
         # Some supported cases for su, env and chroot commands
-        if re.match(su, code):
+        if su.match(code):
             code += " -s /bin/bash"
 
         # Send code
         self.child.sendline(code)
 
         # If there is not need to wait for the password prompt
-        if re.match(bash, code) and re.match(sudo, code) is None:
+        if bash.match(code) and not sudo.match(code):
             self.child.sendline(self.prompt_change)
 
         prompts = [self.ps1_re, self.ps2_re,
@@ -128,19 +130,20 @@ class IREPLWrapper(replwrap.REPLWrapper):
                     self._expect_prompt(1)
                     return
                 else:
-                    if len(self.child.before) != 0 and re.match(bash, code) is None and re.match(su, code) is None:
+                    if not su.match(code) and not bash.match(code) and not env.match(code)\
+                            and len(self.child.before) != 0:
                         # Prompt received, but partial line precedes it.
                         self.line_output_callback(self.child.before)
                     break
 
-                if re.match(bash, code) is not None or re.match(su, code) is not None:
+                if su.match(code) or bash.match(code) or env.match(code):
                     self.child.sendline(self.prompt_change)
             except:
                 # Required for sudo su if not prompted for password
                 self.child.sendline(self.prompt_change)
 
         # Initialization
-        if re.match(su, code) or re.match(bash, code):
+        if su.match(code) or bash.match(code) or env.match(code):
             self.run_command(self.extra_init_cmd)
             self.run_command("bind 'set enable-bracketed-paste off' >/dev/null 2>&1 || true")
             # self.run_command(build_cmds())
@@ -278,7 +281,7 @@ class BashKernel(Kernel):
 
         interrupted = False
         try:
-            if True in [re.match(cmd, code.rstrip()) is not None for cmd in special_commands]:
+            if True in [cmd.match(code.rstrip()) is not None for cmd in special_commands]:
                 self.bashwrapper.special_command(code.rstrip())
             else:
                 # Note: timeout=None tells IREPLWrapper to do incremental
