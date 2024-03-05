@@ -19,7 +19,7 @@ from .display import (extract_contents, build_cmds)
 
 # Special command patterns
 su = re.compile("(sudo )? *((\/usr)?\/bin\/)?su( +|$).*")
-env = re.compile("(sudo )? *((\/usr)?\/bin\/)?(chroot |env )(.* )?((\/usr)?\/bin\/)?bash( +|$).*")
+env = re.compile("(sudo )? *((\/usr)?\/bin\/)?(chroot |env |exec )(.* )?((\/usr)?\/bin\/)?bash( +|$).*")
 bash = re.compile("(sudo )? *((\/usr)?\/bin\/)?bash( +|$).*")
 passwd = re.compile("(sudo )? *((\/usr)?\/bin\/)?passwd( +|$).*")
 sudo = re.compile("sudo .+")
