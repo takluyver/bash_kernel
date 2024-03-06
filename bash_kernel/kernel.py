@@ -94,10 +94,6 @@ class IREPLWrapper(replwrap.REPLWrapper):
         # Send code
         self.child.sendline(code)
 
-        # If there is not need to wait for the password prompt
-        if bash.match(code) and not sudo.match(code):
-            self.child.sendline(self.prompt_change)
-
         prompts = [self.ps1_re, self.ps2_re,
                    u"Password", u"\[sudo\] password for ",
                    u"New password",
