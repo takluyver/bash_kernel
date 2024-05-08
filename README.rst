@@ -23,6 +23,35 @@ To use it, run one of:
     jupyter qtconsole --kernel bash
     jupyter console --kernel bash
 
+
+`pipx` and "externally managed" environments
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A recent-ish `PEP 668 <https://peps.python.org/pep-0668/#guide-users-towards-virtual-environments>`_ recommends that users install Python applications with `pipx` rather than global installs with `pip`. This is strongly suggested/enforced in current Linux distros. Because `bash_kernel` needs an extra step to actually work after installing with `pip` or `pipx`, this causes some inconvenience.
+
+First, one must install the Jupyter ecosystem with pipx, and then inject bash_kernel (and any other bits of the jupyter ecosystem you use, like papermill) into the same pipx venv.
+
+.. code:: shell
+
+    pipx install --include-deps jupyter
+    pipx inject --include-apps --include-deps jupyter bash_kernel
+
+One then must manually find the corresponding venv, activate it, and run `python -m bash_kernel.install` *within* that virtual env. If done outside it, this won't work as bash_kernel is not installed in the global environment.
+
+.. code:: shell
+
+    cd ~/.local/pipx/venvs/jupyter/
+    source bin/activate
+    python -m bash_kernel.install
+    deactivate
+
+Of course, one can also install bash_kernel to the global environement thusly:
+
+.. code:: shell
+
+    pip install --break-system-packages juptyer bash_kernel
+    python -m bash_kernel.install
+
 Displaying Rich Content
 -----------------------
 
@@ -64,7 +93,7 @@ Programmatically Generating Rich Content
 ----------------------------------------
 
 Alternatively one can simply generate the rich content to a file in /tmp (or $TMPDIR)
-and then output the corresponding (to the mimetype) context prefix "_TEXT_SAVED_*"
+and then output the corresponding (to the mimetype) context prefix ``"_TEXT_SAVED_*"``
 constant. So one can write programs (C++, Go, Rust, etc.) that generates rich content
 appropriately, when within a notebook.
 
