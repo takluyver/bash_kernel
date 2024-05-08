@@ -113,7 +113,10 @@ class BashKernel(Kernel):
         # We need to temporarily reset the default signal handler for SIGPIPE so
         # that commands like `head` used in a pipe chain can signal to the data
         # producers. 
-        old_sigpipe_handler = signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+        old_sigpipe_handler = None
+        if hasattr(signal, "SIGPIPE"):
+            # Windows has no sigpipe, see <https://github.com/takluyver/bash_kernel/issues/143>
+            old_sigpipe_handler = signal.signal(signal.SIGPIPE, signal.SIG_DFL)
         try:
             # Note: the next few lines mirror functionality in the
             # bash() function of pexpect/replwrap.py.  Look at the
@@ -136,7 +139,8 @@ class BashKernel(Kernel):
                                             line_output_callback=self.process_output)
         finally:
             signal.signal(signal.SIGINT, old_sigint_handler)
-            signal.signal(signal.SIGPIPE, old_sigpipe_handler)
+            if old_sigpipe_handler is not None:
+                signal.signal(signal.SIGPIPE, old_sigpipe_handler)
 
         # Disable bracketed paste (see <https://github.com/takluyver/bash_kernel/issues/117>)
         self.bashwrapper.run_command("bind 'set enable-bracketed-paste off' >/dev/null 2>&1 || true")
