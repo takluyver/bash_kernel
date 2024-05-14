@@ -52,6 +52,11 @@ Of course, one can also install bash_kernel to the global environement thusly:
     pip install --break-system-packages juptyer bash_kernel
     python -m bash_kernel.install
 
+Requirements of Bash
+~~~~~~~~~~~~~~~~~~~~
+
+Bash kernel directly interacts with bash, and therefore requires a functioning interactive build of bash. In nearly all cases this will be the default, however some distributions remove GNU readline or other interactivity features of bash. Almost always, these features are provided in a separate, more complete bash package, which should be installed. See for example https://github.com/takluyver/bash_kernel/issues/142.
+
 Displaying Rich Content
 -----------------------
 
