@@ -70,14 +70,13 @@ Example:
 
     cat dog.png | display
     echo "<b>Dog</b>, not a cat." | displayHTML
-    echo "alert('It is known khaleesi\!');" | displayJS
+    echo "alert('Hello from bash_kernel\!');" | displayJS
 
 Updating Rich Content Cells
 ---------------------------
 
 If one is doing something that requires dynamic updates, one can specify a unique display_id,
-should be a string name (downstream documentation is not clear on this), and the contents
-will be replaced by the new value. Example:
+which should be a string name. On each update, the contents will be replaced by the new value. Example:
 
 .. code:: shell
 
@@ -89,10 +88,10 @@ will be replaced by the new value. Example:
         sleep 1
     done
 
-The same works for images or even javascript content.
+The same works for images and javascript content.
 
-**Remember to create always a new id** (random ids works perfect) each time the cell is executed, otherwise
-it will try to display on an HTML element that no longer exists (they are erased each time a cell is re-run).
+**Remember to create always a new id** each time the cell is executed, otherwise it will try to display
+on an HTML element that no longer exists (they are erased each time a cell is re-run).
 
 Programmatically Generating Rich Content
 ----------------------------------------
