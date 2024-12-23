@@ -8,7 +8,7 @@ authors = [
     {name = "Thomas Kluyver", email = "thomas@kluyver.me.uk"},
 ]
 readme = "README.rst"
-dependencies = ["pexpect (>=4.0)", "ipykernel"]
+dependencies = ["pexpect (>=4.0)", "ipykernel", "filetype"]
 classifiers = [
     "Framework :: Jupyter",
     "License :: OSI Approved :: BSD License",
