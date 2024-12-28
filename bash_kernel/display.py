@@ -103,7 +103,7 @@ def display_data_for_image(filename):
         image = f.read()
     _unlink_if_temporary(filename)
     image_type = filetype.image_match(image).extension
-    if image_type not in ("png", "jpeg", "gif", "webp"):
+    if image_type not in ("png", "jpg", "gif", "webp"):
         raise ValueError("Not a valid image: %s" % image)
 
     content = {
