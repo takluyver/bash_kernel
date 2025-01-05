@@ -52,10 +52,11 @@ display_data_for_<new_type>; (3) Create an entry in CONTENT_DATA_PREFIXES. Btw, 
 is your friend to debug the format of the content message.
 """
 import base64
-import imghdr
 import json
 import os
 import re
+
+import filetype
 
 
 _TEXT_SAVED_IMAGE = "bash_kernel: saved image data to: "
@@ -101,15 +102,13 @@ def display_data_for_image(filename):
     with open(filename, 'rb') as f:
         image = f.read()
     _unlink_if_temporary(filename)
-
-    image_type = imghdr.what(None, image)
-    if image_type is None:
+    image_type = filetype.image_match(image).mime
+    if image_type not in ("image/png", "image/jpg", "image/gif", "image/webp"):
         raise ValueError("Not a valid image: %s" % image)
 
-    image_data = base64.b64encode(image).decode('ascii')
     content = {
         'data': {
-            'image/' + image_type: image_data
+            image_type: image
         },
         'metadata': {}
     }
