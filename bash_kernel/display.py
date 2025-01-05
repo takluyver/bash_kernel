@@ -102,13 +102,13 @@ def display_data_for_image(filename):
     with open(filename, 'rb') as f:
         image = f.read()
     _unlink_if_temporary(filename)
-    image_type = filetype.image_match(image).extension
-    if image_type not in ("png", "jpg", "gif", "webp"):
+    image_type = filetype.image_match(image).mime
+    if image_type not in ("image/png", "image/jpg", "image/gif", "image/webp"):
         raise ValueError("Not a valid image: %s" % image)
 
     content = {
         'data': {
-            'image/' + image_type: image
+            image_type: image
         },
         'metadata': {}
     }
