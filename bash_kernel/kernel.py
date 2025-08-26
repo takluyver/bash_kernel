@@ -16,6 +16,7 @@ __version__ = '0.10.0'
 version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
 from .display import (extract_contents, build_cmds)
+from .exit_code_checker import get_last_exit_code
 
 class IREPLWrapper(replwrap.REPLWrapper):
     """A subclass of REPLWrapper that gives incremental output
@@ -224,7 +225,7 @@ class BashKernel(Kernel):
             return {'status': 'abort', 'execution_count': self.execution_count}
 
         try:
-            exitcode = int(self.bashwrapper.run_command('{ echo $?; } 2>/dev/null').rstrip().split("\r\n")[0])
+            exitcode =  get_last_exit_code(self.bashwrapper)
         except Exception as exc:
             exitcode = 1
 
