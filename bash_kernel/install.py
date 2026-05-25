@@ -13,7 +13,7 @@ kernel_json = {"argv":[sys.executable,"-m","bash_kernel", "-f", "{connection_fil
  "display_name":"Bash",
  "language":"bash",
  "codemirror_mode":"shell",
- "env":{"PS1": "$"}
+ "env":{"PS1": "$", "VTE_VERSION": ""}
 }
 
 def install_my_kernel_spec(user=True, prefix=None):
