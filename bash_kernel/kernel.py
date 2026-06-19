@@ -88,7 +88,8 @@ class BashKernel(Kernel):
     @property
     def banner(self):
         if self._banner is None:
-            self._banner = check_output(['bash', '--version']).decode('utf-8')
+            bash_cmd = os.environ.get('BASH_KERNEL_CMD', 'bash').split()[0]
+            self._banner = check_output([bash_cmd, '--version']).decode('utf-8')
         return self._banner
 
     language_info = {'name': 'bash',
@@ -120,7 +121,9 @@ class BashKernel(Kernel):
             # source code there for comments and context for
             # understanding the code here.
             bashrc = os.path.join(os.path.dirname(pexpect.__file__), 'bashrc.sh')
-            child = pexpect.spawn("bash", ['--rcfile', bashrc], echo=False,
+            bash_cmd = os.environ.get('BASH_KERNEL_CMD', 'bash')
+            bash_args = bash_cmd.split() + ['--rcfile', bashrc]
+            child = pexpect.spawn(bash_args[0], bash_args[1:], echo=False,
                                   encoding='utf-8', codec_errors='replace')
             # Following comment stolen from upstream's REPLWrap:
             # If the user runs 'env', the value of PS1 will be in the output. To avoid
