@@ -1,3 +1,9 @@
+# Unreleased
+
+- Add `BASH_KERNEL_CMD` environment variable to override the command used to
+  launch bash. Its value is split on whitespace, allowing a wrapper command
+  with arguments, e.g. `export BASH_KERNEL_CMD="apptainer exec --nv container.sif bash"`.
+
 # Version 0.10.0 (2024-01-05)
 
 - Support for Python 3.13, by replacing the removed imghdr standard library module

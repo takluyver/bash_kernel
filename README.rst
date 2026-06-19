@@ -57,6 +57,30 @@ Requirements of Bash
 
 Bash kernel directly interacts with bash, and therefore requires a functioning interactive build of bash. In nearly all cases this will be the default, however some distributions remove GNU readline or other interactivity features of bash. Almost always, these features are provided in a separate, more complete bash package, which should be installed. See for example https://github.com/takluyver/bash_kernel/issues/142.
 
+Using a custom bash command
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default the kernel launches the ``bash`` found on your ``PATH``. You can
+override this by setting the ``BASH_KERNEL_CMD`` environment variable before
+starting Jupyter. Its value is split on whitespace, so you can supply a
+wrapper command with arguments, as long as it ultimately starts an interactive
+``bash``.
+
+This is useful for running the kernel inside a container, or via any other
+wrapper that eventually launches ``bash``. For example, to run the kernel's
+bash inside an `Apptainer <https://apptainer.org/>`_ (formerly Singularity)
+container:
+
+.. code:: shell
+
+    export BASH_KERNEL_CMD="apptainer exec --nv container.sif bash"
+    jupyter notebook
+
+The kernel passes ``--rcfile`` (pointing at its bundled ``bashrc.sh``) to the
+last token of the command, so the wrapped ``bash`` is configured exactly as the
+default one would be. The same value is also used to report the kernel banner
+(``<cmd> --version``).
+
 Displaying Rich Content
 -----------------------
 
