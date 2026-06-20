@@ -75,14 +75,6 @@ container:
     export BASH_KERNEL_CMD="apptainer exec --nv container.sif bash"
     jupyter notebook
 
-When a wrapper is used, the kernel automatically copies the bash startup file it
-passes via ``--rcfile`` into the shared temp directory (``$TMPDIR``, or ``/tmp``
-if unset) so that bash can read it from inside the wrapper. This is the same
-directory used for rich-content output, so as long as that directory is shared
-with the wrapper -- which container runtimes such as Apptainer do by default for
-``/tmp`` -- no extra bind mounts are needed. The copy is removed when the kernel
-exits.
-
 To make the override available as its own entry in the Jupyter kernel menu
 (instead of exporting the variable globally), install a dedicated kernelspec
 whose ``kernel.json`` sets the variable in its ``env`` block. This also lets a
@@ -96,6 +88,13 @@ plain-bash kernel and a wrapped kernel coexist:
       "language": "bash",
       "env": { "BASH_KERNEL_CMD": "apptainer exec --nv container.sif bash" }
     }
+
+**Note:** the bash startup file must be readable from inside the wrapper. The
+kernel places it in ``$TMPDIR`` (or ``/tmp``), so this works automatically as
+long as that directory is shared with the wrapper at the same path -- Apptainer
+does this for ``/tmp`` by default. Other runtimes may need an explicit mount
+(e.g. Docker's ``-v /tmp:/tmp``), and pointing ``$TMPDIR`` at a directory the
+wrapper can't see will prevent startup.
 
 Displaying Rich Content
 -----------------------
