@@ -62,9 +62,8 @@ Using a custom bash command
 
 By default the kernel launches the ``bash`` found on your ``PATH``. You can
 override this by setting the ``BASH_KERNEL_CMD`` environment variable before
-starting Jupyter. Its value is split on whitespace, so you can supply a
-wrapper command with arguments, as long as it ultimately starts an interactive
-``bash``.
+starting Jupyter. Its value is split on whitespace, so you can supply a wrapper
+command with arguments, as long as it ultimately starts an interactive ``bash``.
 
 This is useful for running the kernel inside a container, or via any other
 wrapper that eventually launches ``bash``. For example, to run the kernel's
@@ -76,10 +75,27 @@ container:
     export BASH_KERNEL_CMD="apptainer exec --nv container.sif bash"
     jupyter notebook
 
-The kernel passes ``--rcfile`` (pointing at its bundled ``bashrc.sh``) to the
-last token of the command, so the wrapped ``bash`` is configured exactly as the
-default one would be. The same value is also used to report the kernel banner
-(``<cmd> --version``).
+When a wrapper is used, the kernel automatically copies the bash startup file it
+passes via ``--rcfile`` into the shared temp directory (``$TMPDIR``, or ``/tmp``
+if unset) so that bash can read it from inside the wrapper. This is the same
+directory used for rich-content output, so as long as that directory is shared
+with the wrapper -- which container runtimes such as Apptainer do by default for
+``/tmp`` -- no extra bind mounts are needed. The copy is removed when the kernel
+exits.
+
+To make the override available as its own entry in the Jupyter kernel menu
+(instead of exporting the variable globally), install a dedicated kernelspec
+whose ``kernel.json`` sets the variable in its ``env`` block. This also lets a
+plain-bash kernel and a wrapped kernel coexist:
+
+.. code:: json
+
+    {
+      "argv": ["python", "-m", "bash_kernel", "-f", "{connection_file}"],
+      "display_name": "Bash (container)",
+      "language": "bash",
+      "env": { "BASH_KERNEL_CMD": "apptainer exec --nv container.sif bash" }
+    }
 
 Displaying Rich Content
 -----------------------

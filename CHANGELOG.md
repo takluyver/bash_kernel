@@ -1,8 +1,12 @@
 # Unreleased
 
 - Add `BASH_KERNEL_CMD` environment variable to override the command used to
-  launch bash. Its value is split on whitespace, allowing a wrapper command
-  with arguments, e.g. `export BASH_KERNEL_CMD="apptainer exec --nv container.sif bash"`.
+  launch bash. Its value allows a wrapper command with arguments, e.g.
+  `export BASH_KERNEL_CMD="apptainer exec --nv container.sif bash"`. When a
+  wrapper is used, the `--rcfile` bash startup file is copied into the shared
+  temp directory (`$TMPDIR`/`/tmp`) so it is readable from inside the wrapper
+  (e.g. a container), and the kernel banner no longer fails if the wrapper's
+  `--version` output is unavailable or unexpected.
 
 # Version 0.10.0 (2024-01-05)
 
