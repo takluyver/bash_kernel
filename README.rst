@@ -62,8 +62,8 @@ Using a custom bash command
 
 By default the kernel launches the ``bash`` found on your ``PATH``. You can
 override this by setting the ``BASH_KERNEL_CMD`` environment variable before
-starting Jupyter. Its value is split on whitespace, so you can supply a wrapper
-command with arguments, as long as it ultimately starts an interactive ``bash``.
+starting Jupyter. You can put in whatever you like here, as long as it starts an
+interactive ``bash``.
 
 This is useful for running the kernel inside a container, or via any other
 wrapper that eventually launches ``bash``. For example, to run the kernel's
