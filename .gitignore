@@ -4,3 +4,4 @@ build/
 dist/
 MANIFEST
 .ipynb_checkpoints
+.DS_Store

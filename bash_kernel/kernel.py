@@ -3,7 +3,12 @@ from pexpect import replwrap, EOF
 import pexpect
 
 from subprocess import check_output
+import atexit
+import os
 import os.path
+import shlex
+import shutil
+import tempfile
 import uuid
 import random
 import string
@@ -16,6 +21,55 @@ __version__ = '0.10.0'
 version_pat = re.compile(r'version (\d+(\.\d+)+)')
 
 from .display import (extract_contents, build_cmds)
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+def bash_command():
+    """The command (and any wrapper arguments) used to launch bash.
+
+    Defaults to ``bash``, but can be overridden with the ``BASH_KERNEL_CMD``
+    environment variable to launch bash via a wrapper, e.g. inside a
+    container: ``apptainer exec --nv container.sif bash``. The value is parsed
+    with shell-like quoting, so paths/arguments containing spaces can be
+    quoted. Returns a list suitable for ``subprocess``/``pexpect``.
+    """
+    return shlex.split(os.environ.get('BASH_KERNEL_CMD') or 'bash') or ['bash']
+
+_bashrc_copy = None
+
+def _remove_bashrc_copy():
+    global _bashrc_copy
+    if _bashrc_copy and os.path.exists(_bashrc_copy):
+        try:
+            os.remove(_bashrc_copy)
+        except OSError:
+            pass
+    _bashrc_copy = None
+
+def bashrc_path():
+    """Path to the bash startup file passed to bash via ``--rcfile``.
+
+    Normally this is pexpect's bundled ``bashrc.sh``. But when
+    ``BASH_KERNEL_CMD`` launches bash via a wrapper (e.g. a container), that
+    host path may not be visible inside the wrapper, so we copy the rcfile into
+    the shared temp dir (``$TMPDIR`` or ``/tmp``) where it can be read.
+    """
+    src = os.path.join(os.path.dirname(pexpect.__file__), 'bashrc.sh')
+    if 'BASH_KERNEL_CMD' not in os.environ:
+        return src
+
+    global _bashrc_copy
+    if _bashrc_copy is None:
+        tmp_dir = os.environ.get('TMPDIR', '/tmp')
+        fd, path = tempfile.mkstemp(prefix='bash_kernel_', suffix='.sh',
+                                    dir=tmp_dir)
+        os.close(fd)
+        shutil.copyfile(src, path)
+        _bashrc_copy = path
+        atexit.register(_remove_bashrc_copy)
+    return _bashrc_copy
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 class IREPLWrapper(replwrap.REPLWrapper):
     """A subclass of REPLWrapper that gives incremental output
@@ -81,14 +135,19 @@ class BashKernel(Kernel):
     @property
     def language_version(self):
         m = version_pat.search(self.banner)
-        return m.group(1)
+        return m.group(1) if m else ''
 
     _banner = None
 
     @property
     def banner(self):
         if self._banner is None:
-            self._banner = check_output(['bash', '--version']).decode('utf-8')
+            try:
+                self._banner = check_output(bash_command() + ['--version']).decode('utf-8')
+            except Exception as exc:
+                # Don't let a missing/failing wrapper command (e.g. a container
+                # image that isn't available) break the kernel_info reply.
+                self._banner = 'bash_kernel: unable to determine bash version ({})'.format(exc)
         return self._banner
 
     language_info = {'name': 'bash',
@@ -119,8 +178,9 @@ class BashKernel(Kernel):
             # bash() function of pexpect/replwrap.py.  Look at the
             # source code there for comments and context for
             # understanding the code here.
-            bashrc = os.path.join(os.path.dirname(pexpect.__file__), 'bashrc.sh')
-            child = pexpect.spawn("bash", ['--rcfile', bashrc], echo=False,
+            bashrc = bashrc_path()
+            bash_args = bash_command() + ['--rcfile', bashrc]
+            child = pexpect.spawn(bash_args[0], bash_args[1:], echo=False,
                                   encoding='utf-8', codec_errors='replace')
             # Following comment stolen from upstream's REPLWrap:
             # If the user runs 'env', the value of PS1 will be in the output. To avoid
