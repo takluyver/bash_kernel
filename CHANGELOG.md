@@ -1,3 +1,13 @@
+# Unreleased
+
+- Add `BASH_KERNEL_CMD` environment variable to override the command used to
+  launch bash. Its value allows a wrapper command with arguments, e.g.
+  `export BASH_KERNEL_CMD="apptainer exec --nv container.sif bash"`. When a
+  wrapper is used, the `--rcfile` bash startup file is copied into the shared
+  temp directory (`$TMPDIR`/`/tmp`) so it is readable from inside the wrapper
+  (e.g. a container), and the kernel banner no longer fails if the wrapper's
+  `--version` output is unavailable or unexpected.
+
 # Version 0.10.0 (2024-01-05)
 
 - Support for Python 3.13, by replacing the removed imghdr standard library module

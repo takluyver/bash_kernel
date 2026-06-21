@@ -57,6 +57,45 @@ Requirements of Bash
 
 Bash kernel directly interacts with bash, and therefore requires a functioning interactive build of bash. In nearly all cases this will be the default, however some distributions remove GNU readline or other interactivity features of bash. Almost always, these features are provided in a separate, more complete bash package, which should be installed. See for example https://github.com/takluyver/bash_kernel/issues/142.
 
+Using a custom bash command
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default the kernel launches the ``bash`` found on your ``PATH``. You can
+override this by setting the ``BASH_KERNEL_CMD`` environment variable before
+starting Jupyter. You can put in whatever you like here, as long as it starts an
+interactive ``bash``.
+
+This is useful for running the kernel inside a container, or via any other
+wrapper that eventually launches ``bash``. For example, to run the kernel's
+bash inside an `Apptainer <https://apptainer.org/>`_ (formerly Singularity)
+container:
+
+.. code:: shell
+
+    export BASH_KERNEL_CMD="apptainer exec --nv container.sif bash"
+    jupyter notebook
+
+To make the override available as its own entry in the Jupyter kernel menu
+(instead of exporting the variable globally), install a dedicated kernelspec
+whose ``kernel.json`` sets the variable in its ``env`` block. This also lets a
+plain-bash kernel and a wrapped kernel coexist:
+
+.. code:: json
+
+    {
+      "argv": ["python", "-m", "bash_kernel", "-f", "{connection_file}"],
+      "display_name": "Bash (container)",
+      "language": "bash",
+      "env": { "BASH_KERNEL_CMD": "apptainer exec --nv container.sif bash" }
+    }
+
+**Note:** the bash startup file must be readable from inside the wrapper. The
+kernel places it in ``$TMPDIR`` (or ``/tmp``), so this works automatically as
+long as that directory is shared with the wrapper at the same path -- Apptainer
+does this for ``/tmp`` by default. Other runtimes may need an explicit mount
+(e.g. Docker's ``-v /tmp:/tmp``), and pointing ``$TMPDIR`` at a directory the
+wrapper can't see will prevent startup.
+
 Displaying Rich Content
 -----------------------
 
