@@ -122,6 +122,14 @@ class BashKernel(Kernel):
             bashrc = os.path.join(os.path.dirname(pexpect.__file__), 'bashrc.sh')
             child = pexpect.spawn("bash", ['--rcfile', bashrc], echo=False,
                                   encoding='utf-8', codec_errors='replace')
+            # pexpect sleeps for delaybeforesend milliseconds (default 50)
+            # before every send, and run_command submits a cell one line at a
+            # time, so this adds ~50ms per line -- multiple seconds for a large
+            # cell. We only ever send just after seeing a prompt, so the delay
+            # (which guards against a TTY echo race -- see pexpect's rationale)
+            # is redundant here.
+            # https://github.com/pexpect/pexpect/blob/aa989594e1e413f45c18b26ded1783f7d5990fe5/pexpect/pty_spawn.py#L136-L150
+            child.delaybeforesend = 0
             # Following comment stolen from upstream's REPLWrap:
             # If the user runs 'env', the value of PS1 will be in the output. To avoid
             # replwrap seeing that as the next prompt, we'll embed the marker characters
