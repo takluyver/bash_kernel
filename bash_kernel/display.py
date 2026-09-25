@@ -8,7 +8,7 @@ Example:
 
 $ cat dog.png | display
 $ echo "<b>Dog</b>, not a cat." | displayHTML
-$ echo "alert('It is known khaleesi\!');" | displayJS
+$ echo "alert('It is known khaleesi\\!');" | displayJS
 
 ### Updating rich content cells
 

@@ -127,11 +127,11 @@ class BashKernel(Kernel):
             # replwrap seeing that as the next prompt, we'll embed the marker characters
             # for invisible characters in the prompt; these show up when inspecting the
             # environment variable, but not when bash displays the prompt.
-            ps1 = self.unique_prompt + u'\[\]' + ">"
-            ps2 = self.unique_prompt + u'\[\]' + "+"
+            ps1 = self.unique_prompt + u'\\[\\]' + ">"
+            ps2 = self.unique_prompt + u'\\[\\]' + "+"
             prompt_change = u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''".format(ps1, ps2)
             # Using IREPLWrapper to get incremental output
-            self.bashwrapper = IREPLWrapper(child, u'\$', prompt_change, self.unique_prompt,
+            self.bashwrapper = IREPLWrapper(child, u'\\$', prompt_change, self.unique_prompt,
                                             extra_init_cmd="export PAGER=cat",
                                             line_output_callback=self.process_output)
         finally:
